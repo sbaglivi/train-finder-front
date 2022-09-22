@@ -4,6 +4,13 @@ import {useState} from 'react';
 
 const App = () => {
 	const [formData, setFormData] = useState({origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100', noAR: false});
+	const [trains, setTrains] = useState({outgoing: [], returning: []})
+	const [prevQuery, setPrevQuery] = useState({
+		formData: {}, time: 0, return: {
+			italo: {trainId: '', inputValue: '', cookies: {}},
+			trenitalia: {trainId: '', cartId: '', cookies: {}},
+		}
+	})
 	// newresults needs to be {query: {params}, trenitalia: {err: '', res: [], cartId:''}, italo: {err: '', res: []}}
 	const [results, setResults] = useState({error: '', results: [], trenitaliaCartId: '', query: {time: ''}, trenitaliaCookies: {}, italoCookies: {}}); // if time passed too big either need to remake first request or smthing
 	const [returnResults, setReturnResults] = useState({trenitaliaQuery: '', italoQuery: '', results: []})
