@@ -22,3 +22,10 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+td {
+  text-align: center;
+}
+.passengersInput {
+  width: 3em;
+  text-align: center;
+}

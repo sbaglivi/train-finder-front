@@ -1,7 +1,6 @@
 import parse from 'date-fns/parse';
 import format from 'date-fns/format';
 
-const acceptedStations = ['Milano Centrale', 'Milano Garibaldi', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
 export const validateData = (data, setFormData, acceptedStations) => {
 	if (!validateDateTime(data.dateTime, setFormData))
 		return false
@@ -24,7 +23,7 @@ export const validateData = (data, setFormData, acceptedStations) => {
 export function validateDateTime(str, setFormData, goingOutDateTime=''){
 	const referenceDate = new Date();
 	referenceDate.setHours(referenceDate.getHours()+1, 0, 0, 0);
-	const acceptedDateTimeFormats = ["dd/MM/yy HH", "dd/MM/yy"]
+	const acceptedDateTimeFormats = ["dd/MM/yy HH", "dd/MM/yy", 'dd/MM HH', 'dd/MM']
 	let errorText = ''
     let fieldName = goingOutDateTime === '' ? 'dateTime' : 'returnDateTime';
 
@@ -32,13 +31,13 @@ export function validateDateTime(str, setFormData, goingOutDateTime=''){
 		try {
 			let parsedDate = parse(str, possibleFormat, referenceDate)
 			if (isNaN(parsedDate)) throw Error("Invalid date");
-			if (possibleFormat === 'dd/MM/yy'){
+			if (possibleFormat === 'dd/MM/yy' || possibleFormat === 'dd/MM'){
 				if (fieldName === 'dateTime'){
-					if (format(parsedDate, 'dd/MM/yy') === format(referenceDate, 'dd/MM/yy')) parsedDate.setHours(referenceDate.getHours())
+					if (format(parsedDate, possibleFormat) === format(referenceDate, possibleFormat)) parsedDate.setHours(referenceDate.getHours())
 					else parsedDate.setHours('08');
 				} else {
 					let depDateTimeObject = parse(goingOutDateTime, 'dd/MM/yy HH', referenceDate)
-					if (format(parsedDate, 'dd/MM/yy') === format(depDateTimeObject, 'dd/MM/yy')) parsedDate.setHours(depDateTimeObject.getHours()+1)
+					if (format(parsedDate, possibleFormat) === format(depDateTimeObject, possibleFormat)) parsedDate.setHours(depDateTimeObject.getHours()+1)
 					else parsedDate.setHours('08');
 				}
 			}
@@ -82,7 +81,7 @@ export const post = async (path, body) => {
 	return await response.json()
 }
 
-const getRequestBodyForBothReturns = (formData, prevQuery) => {
+export const getRequestBodyForBothReturns = (formData, prevQuery) => {
     let {origin, destination, dateTime, returnDateTime, passengers} = formData;
     let {cartId, trainId, cookies: trenitaliaCookies} = prevQuery.return.trenitalia;
     let {inputValue, cookies: italoCookies} = prevQuery.return.italo;

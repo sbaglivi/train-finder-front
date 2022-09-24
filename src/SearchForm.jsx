@@ -5,7 +5,7 @@ import departureTimeSort from './departureTimeSort.js';
 import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post, getRequestBodyForBothReturns} from './formSubmit';
 
 
-const SearchForm = ({setResults, formData, setFormData, setPrevQuery, prevQuery}) => {
+const SearchForm = ({setTrains, formData, setFormData, setPrevQuery, prevQuery}) => {
 	const [searchResults, setSearchResults] = useState([]);
 	const [ulOffsetLeft, setUlOffsetLeft] = useState(0);
 
@@ -42,7 +42,7 @@ const SearchForm = ({setResults, formData, setFormData, setPrevQuery, prevQuery}
 	}
 	const getResults = async e => {
 		e.preventDefault();
-        if(!validateData(formData)){
+        if(!validateData(formData, setFormData, acceptedStations)){
 			return;
 		}
 
@@ -54,36 +54,40 @@ const SearchForm = ({setResults, formData, setFormData, setPrevQuery, prevQuery}
 
 		if (oneWay){
             let formattedData = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
-            results = await post('/outgoingOnly', formattedData) // File to run is the simple one that just return lines
+            results = await post('/outgoingOnly', JSON.stringify(formattedData)) // File to run is the simple one that just return lines
 			results.sort((a,b) => departureTimeSort(a,b,1));
-            setResults({outgoing: results, returning: []})
+            setTrains({outgoing: results, returning: []})
             outgoingResultsUpdate = true //metadata stays false, needs to be reset if it was there
 
 		} else if (roundtripNoOffers){
 			if (differentFields.every(field => ['returnDateTime', 'noAR'].includes(field))){
-                let body = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
-                results = await post('/outgoingOnly', body) // simple script no metadata since only return search
-                setResults(old => ({...old, returning: results}))
+                let body = {...formData, origin: stationNameToCamelcase(formData.destination), destination: stationNameToCamelcase(formData.origin)} // swapped them because I'm looking for return trips, no?
+                results = await post('/outgoingOnly', JSON.stringify(body)) // simple script no metadata since only return search
+				results.sort((a,b) => departureTimeSort(a,b,1));
+                setTrains(old => ({...old, returning: results}))
 			} else { // requests for both going out and back
                 let body = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
-                results = await post('/allNoOffers', body) // this needs to return metadata
+                results = await post('/allNoOffers', JSON.stringify(body)) // this needs to return metadata
 				results.results.outgoing.sort((a,b) => departureTimeSort(a,b,1));
 				results.results.returning.sort((a,b) => departureTimeSort(a,b,1));
-                setResults(results.results) // can't be just results since it needs to contain metadata
+                setTrains(results.results) // can't be just results since it needs to contain metadata
                 outgoingResultsUpdate = true;
 			}
 
 		} else { // roundtrip with offers
             if (differentFields === ['noAR']){
-                setResults(prev => ({...prev, returning : []}))
+                setTrains(prev => ({...prev, returning : []}))
             } else if (differentFields === ['returnDateTime']){ // only searching new return trips based on previously selected ougoing train
                 let body = getRequestBodyForBothReturns(formData, prevQuery)
-                results = await post('/bothReturns', body)
-                setResults(prev => ({...prev, returning: results}))
+                results = await post('/bothReturns', JSON.stringify(body))
+				results.sort((a,b) => departureTimeSort(a,b,1));
+                setTrains(prev => ({...prev, returning: results}))
             } else { // search new outgoing results and reset return. 
                 let body = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
-                results = await post('/outgoing', body)
-                setResults({outgoing: results.results, returning: []}) // again can't be just res cause metadata coming back
+                results = await post('/outgoing', JSON.stringify(body))
+				console.log(results)
+				results.results.sort((a,b) => departureTimeSort(a,b,1));
+                setTrains({outgoing: results.results, returning: []}) // again can't be just res cause metadata coming back
                 outgoingResultsUpdate = true
                 // Whenever the outgoing research changes (origin, destination, passengers, datetime) the metadata needs reset. If metadata not set you cannot search for return results connected to outgoing
             }
@@ -113,7 +117,7 @@ const SearchForm = ({setResults, formData, setFormData, setPrevQuery, prevQuery}
 		<input type='text' placeholder='dd/mm/yy hh' name='returnDateTime' value={formData.returnDateTime} onBlur={e => validateDateTime(e.target.value, setFormData, formData.dateTime)} onChange={updateFormData} />
 		<input type='text' pattern="[1-9][0-9]{2}|[0-9][1-9][0-9]|[0-9]{2}[1-9]" minLength="3" maxLength="3" placeholder='ASY' name='passengers' 
 			title="3 numbers from 0 to 9 that describe respectively the number of adult, senior and young passengers. (At least one needs to be different from 0)" onChange={updateFormData} 
-			value={formData.passengers}
+			value={formData.passengers} className='passengersInput'
 		/>
 		<label style={{display: formData.returnDateTime !== '' ? '' : 'none'}} >
 			Ignore roundtrip offers
