@@ -81,3 +81,14 @@ data about return requests: formdata, time stamp and cookies, cartid and train i
         // only exception is if someone has made a request with return previously, in that case I can save the data pre-emptively
             // outgoing is dependent on origin/dest/dateTime/passengers
             // ret is dependent on anything
+
+
+---
+
+When the user searches for return results the selected trip should get hightlighted. If he selects one trip per company
+each of the trips should use a different color. 
+The results should match the color of the outgoing trip they're connected to.
+The return results should not be hard, once I have decided colors I can just do backgroundColor: company === x ? 'red' : 'green'
+For the outgoing trip either I make a very long string or maybe I can create a class ?
+long str: selected[result.company] === result.id ? (result.company === 'italo' ? 'blue' : 'green') : 'black'
+class: className={selected[result.company] === result.id ? '${result.company}-selected' : ''} saves the color portion

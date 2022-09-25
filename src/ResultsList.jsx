@@ -2,9 +2,10 @@ import {useState} from 'react';
 import departureTimeSort from './departureTimeSort.js';
 import {post, stationNameToCamelcase} from './formSubmit'
 
-const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setTrains}) => {
+const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setTrains, setOutgoingTrip, outgoingTrains}) => {
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime', asc: 1});
 	let [showMore, setShowMore] = useState('none')
+	let [selected, setSelected] = useState({italo: '', trenitalia: ''})
 
 	const toggleShowMore = () => {
 		setShowMore(oldVal => oldVal === 'none' ? 'table-cell' : 'none')
@@ -33,13 +34,6 @@ const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setT
 		}
 	}
 
-	const updateResults = (oldRes, newRes, company) => {
-		let allResults = oldRes.results
-		let otherCompanyResults = allResults.filter(result => result.company !== company)
-		allResults = [...otherCompanyResults, ...newRes].sort((a, b) => departureTimeSort(a, b, 1))
-		return { ...oldRes, results: allResults }
-	}
-
 	const searchReturn = async (id, company, inputValue) => {
 		const {formData: {origin, destination, dateTime, returnDateTime, passengers}, time, return: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = prevQuery;
 		if ((Date.now() - time)/1000 > 300) {
@@ -50,27 +44,63 @@ const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setT
 		let requestBody = {origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company}
 		let reqResults;
 		if (company === 'trenitalia'){
-			requestBody = {...requestBody, goingoutId: id, cartId, cookies: trenitaliaCookies}
-			reqResults = await post('/return', JSON.stringify(requestBody))
-			if (reqResults.length){
-				setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'trenitalia'), ...reqResults]}))
-				console.log(reqResults)
-			} else {
-				console.log('request for italo returns failed')
+			try {
+				requestBody = {...requestBody, goingoutId: id, cartId, cookies: trenitaliaCookies}
+				reqResults = await post('/return', JSON.stringify(requestBody))
+				if (reqResults.length){
+					setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'trenitalia'), ...reqResults].sort((a,b) => departureTimeSort(a,b,1))}))
+					setOutgoingTrip(id, company)
+					setSelected(prev => ({...prev, [company]: id}))
+					console.log(reqResults)
+				}
+			} catch {
+				console.log('request for trenitalia returns failed')
+				console.log('python3 splitA.py '+[requestBody.origin, requestBody.destination, ...requestBody.dateTime.replaceAll('/','-').split(' '), requestBody.passengers, ...requestBody.returnDateTime.replaceAll('/','-').split(' ')].join(' '))
 			}
 			// update query?
 		} else if (company === 'italo'){
-			requestBody = {...requestBody, inputValue, cookies: italoCookies}
-			reqResults = await post('/return', JSON.stringify(requestBody))
-			if (reqResults.length){
-				setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'italo'), ...reqResults]}))
-				console.log(reqResults)
-			} else {
+			try {
+				requestBody = {...requestBody, inputValue, cookies: italoCookies}
+				reqResults = await post('/return', JSON.stringify(requestBody))
+				if (reqResults.length){
+					setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'italo'), ...reqResults].sort((a,b) => departureTimeSort(a,b,1))}))
+					setOutgoingTrip(id, company)
+					setSelected(prev => ({...prev, [company]: id}))
+					console.log(reqResults)
+				}
+			} catch {
 				console.log('request for italo returns failed')
 			}
 			// updateQuery?
 		}
 	}
+	console.log(outgoingTrains)
+	let tableRows = results.map(result => {
+		let backgroundColor;
+		if (roundtrip === 'outgoing')
+			backgroundColor = selected[result.company] === result.id ? (result.company === 'italo' ? 'blue' : 'green') : 'black'
+		else if (roundtrip === 'returning')
+			backgroundColor = result.company === 'italo' ? 'blue' : 'green'
+		else
+			backgroundColor = 'black'
+		return (
+			<tr key={result.id} style={{backgroundColor: backgroundColor}} >
+				<td>{result.departureTime}</td>
+				<td>{result.arrivalTime}</td>
+				<td>{result.duration}</td>
+				<td>{result.minPrice}</td>
+				<td>{result.company}</td>
+				{roundtrip === 'outgoing' ? <td><button onClick={searchReturn.bind(null, result.id, result.company, result.inputValue)}>Search return</button></td> : null}
+				{roundtrip === 'returning' ? <td>{result.minPrice + outgoingTrains[result.company].minPrice}</td> : null}
+				<td style={{display: showMore}} >{result.minIndividualPrice}</td>
+				<td style={{display: showMore}} >{result.young}</td>
+				<td style={{display: showMore}} >{result.senior}</td>
+				<td style={{display: showMore}} >{result.adult}</td>
+			</tr>
+		)
+	})
+	
+
 	return (
 		<table style={style}>
 		<thead>
@@ -80,7 +110,8 @@ const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setT
 				<th>Duration</th>
 				<th>Prezzo Minimo</th>
 				<th>Company <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-				<th style={{dipslay: roundtrip ? 'table-cell' : 'none'}}>Return</th>
+				<th style={{display: roundtrip === 'outgoing' ? 'table-cell' : 'none'}}>Return</th>
+				<th style={{display: roundtrip === 'returning' ? 'table-cell' : 'none'}}>Total Price</th>
 				<th style={{display: showMore}}>Single</th>
 				<th style={{display: showMore}}>Adult</th>
 				<th style={{display: showMore}}>Young</th>
@@ -88,20 +119,7 @@ const ResultsList = ({results, reorderResults, roundtrip, style, prevQuery, setT
 			</tr>
 		</thead>
 			<tbody>
-				{results.map(result => 
-					<tr key={result.id}>
-						<td>{result.departureTime}</td>
-						<td>{result.arrivalTime}</td>
-						<td>{result.duration}</td>
-						<td>{result.minPrice}</td>
-						<td>{result.company}</td>
-						<td style={{dipslay: roundtrip ? 'table-cell' : 'none'}} ><button onClick={searchReturn.bind(null, result.id, result.company, result.inputValue)}>Search return</button></td>
-						<td style={{display: showMore}} >{result.minIndividualPrice}</td>
-						<td style={{display: showMore}} >{result.young}</td>
-						<td style={{display: showMore}} >{result.senior}</td>
-						<td style={{display: showMore}} >{result.adult}</td>
-					</tr>	
-				)}
+				{tableRows}
 			</tbody>
 		</table>
 	)
