@@ -1,10 +1,12 @@
 import SearchForm from './SearchForm.jsx';
 import ResultsList from './ResultsList.jsx';
+import ReturnResultsTable from './ReturnResultsTable.jsx';
 import {useState} from 'react';
 
 const App = () => {
 	const [formData, setFormData] = useState({origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100', noAR: false});
 	const [trains, setTrains] = useState({outgoing: [], returning: []})
+	const [error, setError] = useState('')
 	const [prevQuery, setPrevQuery] = useState({
 		formData: {}, time: 0, return: {
 			italo: {trainId: '', inputValue: '', cookies: {}},
@@ -25,10 +27,11 @@ const App = () => {
 
 	return (
 		<div>
-			<SearchForm setTrains={setTrains} formData={formData} setFormData={setFormData} setPrevQuery={setPrevQuery} prevQuery={prevQuery}/>
+			{error ? <p>{error}</p> : null}
+			<SearchForm setTrains={setTrains} formData={formData} setFormData={setFormData} setPrevQuery={setPrevQuery} prevQuery={prevQuery} setError={setError}/>
 			<div className='container' style={{display: 'flex'}}>
-				{trains?.outgoing.length ? <ResultsList style={{width: trains?.returning.length ? '50vw' : '100vw'}} setOutgoingTrip={setOutgoingTrip} prevQuery={prevQuery} results={trains.outgoing} reorderResults={newOrder => reorderResults(newOrder, 'outgoing')} setTrains={setTrains} roundtrip={roundtrip}/> : null}
-				{trains?.returning.length ? <ResultsList style={{width: '50vw'}} results={trains.returning} roundtrip={'returning'} outgoingTrains={outgoingTrains} reorderResults={(newOrder) => reorderResults(newOrder, 'returning')} /> : null}
+				{trains?.outgoing.length ? <ResultsList style={{width: trains?.returning.length ? '50vw' : '100vw'}} setOutgoingTrip={setOutgoingTrip} prevQuery={prevQuery} results={trains.outgoing} reorderResults={newOrder => reorderResults(newOrder, 'outgoing')} setTrains={setTrains} roundtrip={roundtrip} setError={setError}/> : null}
+				{trains?.returning.length ? <ReturnResultsTable style={{width: '50vw'}} results={trains.returning} outgoingTrains={outgoingTrains} reorderResults={reorderResults} /> : null}
 			</div>
 		</div>
 	)

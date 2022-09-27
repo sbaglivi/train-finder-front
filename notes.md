@@ -92,3 +92,27 @@ The return results should not be hard, once I have decided colors I can just do 
 For the outgoing trip either I make a very long string or maybe I can create a class ?
 long str: selected[result.company] === result.id ? (result.company === 'italo' ? 'blue' : 'green') : 'black'
 class: className={selected[result.company] === result.id ? '${result.company}-selected' : ''} saves the color portion
+
+
+---
+
+I think the best funtionality would require showing prices both conditioned on buying a/r with a company and independently.
+In order to do this whenever the user makes a roundtrip searh I have to send 2 requests, one with metadata the other without
+Bullshit: when the user submits the research I'll send the outgoing research and the coming back without a/r. Then once he selects
+an outgoing trip I'll have to merge the new data with the old
+
+I'll get res1 and res2. Both without metadata since they're not outgoing trips.
+I have to merge these 2 objects on same departure/arrival times to create a table that has both pricing data points.
+This actually needs to happen for italo as well which overall means 4 requests for return trips. It's a lot and I'm not sure
+how worth it is but w/e
+
+I think it would be really cool to be able to show a loading indicator after submitting that tracks what operation is going on
+at a giving moment: e.g. waiting on response from x - processing data -  etc.
+
+I think we also need the error field back somewhere.
+
+weird part is that I'm going to have to merge the data from return discounts on the front end? If the results are cached
+I could also do it in the js back end but even that doesn't sound appealing, ideally I would've preferred to do it in python
+
+
+

@@ -5,7 +5,7 @@ import departureTimeSort from './departureTimeSort.js';
 import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post, getRequestBodyForBothReturns} from './formSubmit';
 
 
-const SearchForm = ({setTrains, formData, setFormData, setPrevQuery, prevQuery}) => {
+const SearchForm = ({setTrains, formData, setFormData, setPrevQuery, prevQuery, setError}) => {
 	const [searchResults, setSearchResults] = useState([]);
 	const [ulOffsetLeft, setUlOffsetLeft] = useState(0);
 
@@ -55,19 +55,25 @@ const SearchForm = ({setTrains, formData, setFormData, setPrevQuery, prevQuery})
 		if (oneWay){
             let formattedData = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
             results = await post('/outgoingOnly', JSON.stringify(formattedData)) // File to run is the simple one that just return lines
-			results.sort((a,b) => departureTimeSort(a,b,1));
-            setTrains({outgoing: results, returning: []})
+			if (results.error) setError(results.error);
+			else setError('')
+			results.results.sort((a,b) => departureTimeSort(a,b,1));
+            setTrains({outgoing: results.results, returning: []})
             outgoingResultsUpdate = true //metadata stays false, needs to be reset if it was there
 
 		} else if (roundtripNoOffers){
 			if (differentFields.every(field => ['returnDateTime', 'noAR'].includes(field))){
                 let body = {...formData, origin: stationNameToCamelcase(formData.destination), destination: stationNameToCamelcase(formData.origin)} // swapped them because I'm looking for return trips, no?
                 results = await post('/outgoingOnly', JSON.stringify(body)) // simple script no metadata since only return search
-				results.sort((a,b) => departureTimeSort(a,b,1));
-                setTrains(old => ({...old, returning: results}))
+				if (results.error) setError(results.error);
+				else setError('')
+				results.results.sort((a,b) => departureTimeSort(a,b,1));
+                setTrains(old => ({...old, returning: results.results}))
 			} else { // requests for both going out and back
                 let body = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
                 results = await post('/allNoOffers', JSON.stringify(body)) // this needs to return metadata
+				if (results.error) setError(results.error);
+				else setError('')
 				results.results.outgoing.sort((a,b) => departureTimeSort(a,b,1));
 				results.results.returning.sort((a,b) => departureTimeSort(a,b,1));
                 setTrains(results.results) // can't be just results since it needs to contain metadata
@@ -80,12 +86,15 @@ const SearchForm = ({setTrains, formData, setFormData, setPrevQuery, prevQuery})
             } else if (differentFields === ['returnDateTime']){ // only searching new return trips based on previously selected ougoing train
                 let body = getRequestBodyForBothReturns(formData, prevQuery)
                 results = await post('/bothReturns', JSON.stringify(body))
-				results.sort((a,b) => departureTimeSort(a,b,1));
-                setTrains(prev => ({...prev, returning: results}))
+				if (results.error) setError(results.error);
+				else setError('')
+				results.results.sort((a,b) => departureTimeSort(a,b,1));
+                setTrains(prev => ({...prev, returning: results.results}))
             } else { // search new outgoing results and reset return. 
                 let body = {...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination)}
                 results = await post('/outgoing', JSON.stringify(body))
-				console.log(results)
+				if (results.error) setError(results.error)
+				else setError('')
 				results.results.sort((a,b) => departureTimeSort(a,b,1));
                 setTrains({outgoing: results.results, returning: []}) // again can't be just res cause metadata coming back
                 outgoingResultsUpdate = true
