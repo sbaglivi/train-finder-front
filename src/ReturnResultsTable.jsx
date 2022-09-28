@@ -39,8 +39,9 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, style}) =>
 				<td>{result.arrivalTime}</td>
 				<td>{result.duration}</td>
 				<td>{result.minPrice}</td>
+				<td>{result.returnMinPrice}</td>
 				<td>{result.company}</td>
-				<td>{Math.round(10*(result.minPrice + outgoingTrains[result.company].minPrice))/10}</td>
+				<td>{outgoingTrains[result.company]?.minPrice ? Math.round(10*(result.minPrice + outgoingTrains[result.company].minPrice))/10 : '/'}</td>
 				<td style={{display: showMore}} >{result.minIndividualPrice}</td>
 				<td style={{display: showMore}} >{result.young}</td>
 				<td style={{display: showMore}} >{result.senior}</td>
@@ -57,8 +58,9 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, style}) =>
 					<th>Arrival</th>
 					<th>Duration</th>
 					<th>Prezzo Minimo</th>
+					<th>Con andata</th>
 					<th>Company <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-					<th>Total Price</th>
+					<th >Total Price</th>
 					<th style={{display: showMore}}>Single</th>
 					<th style={{display: showMore}}>Adult</th>
 					<th style={{display: showMore}}>Young</th>

@@ -55,7 +55,7 @@ export function validateDateTime(str, setFormData, goingOutDateTime=''){
 }
 
 export const getDifferentFields = (prevQuery, curQuery) => {
-	let importantFields = ['origin', 'destination', 'dateTime', 'returnDateTime', 'passengers', 'noAR']
+	let importantFields = ['origin', 'destination', 'dateTime', 'returnDateTime', 'passengers']
 	return importantFields.filter(field => prevQuery[field] !== curQuery[field])
 }		
 
