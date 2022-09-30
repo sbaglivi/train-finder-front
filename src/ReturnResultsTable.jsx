@@ -24,24 +24,24 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, style}) =>
 		switch(sortOrder.by){
 			case 'departureTime':
 				newOrder = results;
-				reorderResults('returning', newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc)));
+				reorderResults(newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc)));
 				break;
 			default:
 				return;
 		}
 	}
 
+	let anyOutgoingTrainSelected = outgoingTrains.italo?.minPrice || outgoingTrains.trenitalia?.minPrice;
 	let tableRows = results.map(result => {
-		let backgroundColor = result.company === 'italo' ? 'blue' : 'green'
 		return (
-			<tr key={result.id} style={{backgroundColor: backgroundColor}} >
+			<tr key={result.id} >
 				<td>{result.departureTime}</td>
 				<td>{result.arrivalTime}</td>
 				<td>{result.duration}</td>
 				<td>{result.minPrice}</td>
-				<td>{result.returnMinPrice}</td>
+				{anyOutgoingTrainSelected ? <td>{result.returnMinPrice}</td> : null}
 				<td>{result.company}</td>
-				<td>{outgoingTrains[result.company]?.minPrice ? Math.round(10*(result.minPrice + outgoingTrains[result.company].minPrice))/10 : '/'}</td>
+				{anyOutgoingTrainSelected ? <td>{outgoingTrains[result.company]?.minPrice ? Math.round(10*(result.minPrice + outgoingTrains[result.company].minPrice))/10 : '/'}</td> : null}
 				<td style={{display: showMore}} >{result.minIndividualPrice}</td>
 				<td style={{display: showMore}} >{result.young}</td>
 				<td style={{display: showMore}} >{result.senior}</td>
@@ -51,16 +51,18 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, style}) =>
 	})
 
 	return (
+		<div className='tableDiv'>
+		<h2>Ritorno</h2>
 		<table style={style}>
 			<thead>
 				<tr>
-					<th onClick={() => sortResults('departureTime')} >Departure</th>
-					<th>Arrival</th>
-					<th>Duration</th>
-					<th>Prezzo Minimo</th>
-					<th>Con andata</th>
-					<th>Company <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-					<th >Total Price</th>
+					<th onClick={() => sortResults('departureTime')} >Partenza</th>
+					<th>Arrivo</th>
+					<th>Durata</th>
+					<th>Prezzo</th>
+					{anyOutgoingTrainSelected ? <th>Off.AR</th> : null}
+					<th>Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
+					{anyOutgoingTrainSelected ? <th >Tot</th> : null}
 					<th style={{display: showMore}}>Single</th>
 					<th style={{display: showMore}}>Adult</th>
 					<th style={{display: showMore}}>Young</th>
@@ -71,7 +73,7 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, style}) =>
 				{tableRows}
 			</tbody>
 		</table>
-
+		</div>
 	)
 }
 

@@ -1,11 +1,15 @@
 import {useState} from 'react';
 import departureTimeSort from './departureTimeSort.js';
-import {post, stationNameToCamelcase} from './formSubmit'
+import {post as postWithoutDispatch, stationNameToCamelcase} from './formSubmit'
 
-const ResultsList = ({results, reorderResults, style, prevQuery, setTrains, setError, returnTrains}) => {
+const ResultsList = ({state, dispatch, style}) => {
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime', asc: 1});
 	let [showMore, setShowMore] = useState('none')
-	let [selected, setSelected] = useState({italo: '', trenitalia: ''})
+
+	let results = state.trains.outgoing;
+	const post = async (path,body,returning) => {
+		return await postWithoutDispatch(path, body, returning, dispatch);
+	}
 
 	const toggleShowMore = () => {
 		setShowMore(oldVal => oldVal === 'none' ? 'table-cell' : 'none')
@@ -27,97 +31,71 @@ const ResultsList = ({results, reorderResults, style, prevQuery, setTrains, setE
 		switch(sortOrder.by){
 			case 'departureTime':
 				newOrder = results;
-				reorderResults('outgoing', newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc)));
+				newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc));
+				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
 				break;
 			default:
 				return;
 		}
 	}
 
-	const searchReturn = async (train) => {
-		const {formData: {origin, destination, dateTime, returnDateTime, passengers}, time, return: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = prevQuery;
-		if ((Date.now() - time)/1000 > 300) {
-			console.log('More than 5 minutes passed since original request, might be too much!')
-			// return;
+	function addRoundtripPrices(reqResults, returningTrains, company){
+		reqResults.results.sort((a,b) => departureTimeSort(a,b,1));
+		let companyReturnTrains = state.trains.returning.filter(train => train.company === company)
+		for (let newTrainData of reqResults.results){
+			let matchFound = false;
+			for (let trainData of companyReturnTrains){
+				if (newTrainData.departureTime === trainData.departureTime && newTrainData.arrivalTime === trainData.arrivalTime){
+					trainData.returnMinPrice = newTrainData.minPrice;
+					matchFound = true;
+					break;
+				}
+			}
+			if (!matchFound) companyReturnTrains.push(newTrainData)
 		}
-		console.log('cartId is: '+cartId)
-		console.log(train)
+		let newReturningTrains = [...returningTrains.filter(train => train.company !== company), ...companyReturnTrains].sort((a,b) => departureTimeSort(a,b,1))
+		return newReturningTrains;
+	}
+
+	const searchReturn = async (train) => {
+		if (state.trains.chosen[train.company] === train){
+			console.log('The train you clicked on is already the one selected')
+			return;
+		}
+		const {prevQuery: {formData: {origin, destination, dateTime, returnDateTime, passengers}, time}, metadata: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = state;
+		if ((Date.now() - time)/1000 > 300) 
+			console.log('More than 5 minutes passed since original request, might be too much!')
 		let requestBody = {origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company: train.company}
 		let reqResults;
-		if (train.company === 'trenitalia'){
-			try {
-				requestBody = {...requestBody, goingoutId: train.id, cartId, cookies: trenitaliaCookies}
-				console.log(trenitaliaCookies);
-				reqResults = await post('/return', JSON.stringify(requestBody))
-				if (reqResults.error) setError(reqResults.error)
-				else setError('')
-				if (reqResults.results.length){
-					// Are they from the same query?
-					// sort them, then iterate on one and iterate over other to try and 
-					// find a match, if you do you set the returnminprice, if you don't you just add it as a new result
-					reqResults.results.sort((a,b) => departureTimeSort(a,b,1));
-					let trenitaliaReturnTrains = returnTrains.filter(train => train.company === 'trenitalia')
-					for (let newTrainData of reqResults.results){
-						let matchFound = false;
-						for (let trainData of trenitaliaReturnTrains){
-							if (newTrainData.departureTime === trainData.departureTime && newTrainData.arrivalTime === trainData.arrivalTime){
-								trainData.returnMinPrice = newTrainData.minPrice;
-								matchFound = true;
-								break;
-							}
-						}
-						if (!matchFound) trenitaliaReturnTrains.push(newTrainData)
-					}
-					setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'trenitalia'), ...trenitaliaReturnTrains].sort((a,b) => departureTimeSort(a,b,1)), chosen: {...old.chosen, [train.company]: train}}))
-					setSelected(prev => ({...prev, [train.company]: train.id}))
-					console.log(reqResults)
-				}
-			} catch {
-				console.log('request for trenitalia returns failed')
-				console.log('python3 splitA.py '+[requestBody.origin, requestBody.destination, ...requestBody.dateTime.replaceAll('/','-').split(' '), requestBody.passengers, ...requestBody.returnDateTime.replaceAll('/','-').split(' ')].join(' '))
-			}
-			// update query?
-		} else if (train.company === 'italo'){
-			try {
-				requestBody = {...requestBody, inputValue: train.inputValue, cookies: italoCookies}
-				reqResults = await post('/return', JSON.stringify(requestBody))
-				if (reqResults.error) setError(reqResults.error)
-				else setError('')
-				if (reqResults.results.length){
-					reqResults.results.sort((a,b) => departureTimeSort(a,b,1));
-					let italoReturnTrains = returnTrains.filter(train => train.company === 'italo')
-					for (let newTrainData of reqResults.results){
-						let matchFound = false;
-						for (let trainData of italoReturnTrains){
-							if (newTrainData.departureTime === trainData.departureTime && newTrainData.arrivalTime === trainData.arrivalTime){
-								trainData.returnMinPrice = newTrainData.minPrice;
-								matchFound = true;
-								break;
-							}
-						}
-						if (!matchFound) italoReturnTrains.push(newTrainData)
-					}
-					setTrains(old => ({...old, returning: [...old.returning.filter(train => train.company !== 'italo'), ...italoReturnTrains].sort((a,b) => departureTimeSort(a,b,1)), chosen: {...old.chosen, [train.company]: train}}))
-					setSelected(prev => ({...prev, [train.company]: train.id}))
-					console.log(reqResults)
-				}
-			} catch {
-				console.log('request for italo returns failed')
-			}
-			// updateQuery?
+		if (train.company === 'trenitalia')
+			requestBody = {...requestBody, goingoutId: train.id, cartId, cookies: trenitaliaCookies}
+		else 
+			requestBody = {...requestBody, inputValue: train.inputValue, cookies: italoCookies}
+		try {
+			reqResults = await post('/return', JSON.stringify(requestBody), true)
+			if(!reqResults) return;
+			if (reqResults.results.length){
+				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, train.company)
+				let chosen = {...state.trains.chosen,  [train.company]: train}
+				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
+			} else 
+				dispatch({type: 'setError', payload: {error: reqResults.error}});
+		} catch (e) {
+			console.log('request for '+train.company+' returns failed')
+			//console.log('python3 splitA.py '+[requestBody.origin, requestBody.destination, ...requestBody.dateTime.replaceAll('/','-').split(' '), requestBody.passengers, ...requestBody.returnDateTime.replaceAll('/','-').split(' ')].join(' '))
 		}
 	}
 
+	let roundtrip = state.prevQuery.formData.returnDateTime;
 	let tableRows = results.map(result => {
-		let backgroundColor = selected[result.company] === result.id ? (result.company === 'italo' ? 'blue' : 'green') : 'black'
+		let className = state.trains.chosen[result.company]?.id === result.id ? (result.company === 'italo' ? 'italoSelected' : 'trenitaliaSelected') : ''
 		return (
-			<tr key={result.id} style={{backgroundColor: backgroundColor}} >
+			<tr key={result.id} className={className} onDoubleClick={roundtrip ? searchReturn.bind(null, result) : undefined}>
 				<td>{result.departureTime}</td>
 				<td>{result.arrivalTime}</td>
 				<td>{result.duration}</td>
 				<td>{result.minPrice}</td>
 				<td>{result.company}</td>
-				<td><button onClick={searchReturn.bind(null, result)}>Search return</button></td>
 				<td style={{display: showMore}} >{result.minIndividualPrice}</td>
 				<td style={{display: showMore}} >{result.young}</td>
 				<td style={{display: showMore}} >{result.senior}</td>
@@ -128,15 +106,16 @@ const ResultsList = ({results, reorderResults, style, prevQuery, setTrains, setE
 	
 
 	return (
-		<table style={style}>
+		<div className='tableDiv'>
+		<h2>Andata</h2>
+		<table className={state.trains?.returning.length ? '' : 'fullWidth'}>
 		<thead>
 			<tr>
-				<th onClick={() => sortResults('departureTime')} >Departure</th>
-				<th>Arrival</th>
-				<th>Duration</th>
-				<th>Prezzo Minimo</th>
-				<th>Company <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-				<th>Return</th>
+				<th onClick={() => sortResults('departureTime')} >Partenza</th>
+				<th>Arrivo</th>
+				<th>Durata</th>
+				<th>Prezzo</th>
+				<th>Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
 				<th style={{display: showMore}}>Single</th>
 				<th style={{display: showMore}}>Adult</th>
 				<th style={{display: showMore}}>Young</th>
@@ -147,6 +126,7 @@ const ResultsList = ({results, reorderResults, style, prevQuery, setTrains, setE
 				{tableRows}
 			</tbody>
 		</table>
+		</div>
 	)
 }
 

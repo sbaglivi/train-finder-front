@@ -115,4 +115,10 @@ weird part is that I'm going to have to merge the data from return discounts on 
 I could also do it in the js back end but even that doesn't sound appealing, ideally I would've preferred to do it in python
 
 
-
+--- 
+ways the user changes current situation:
+- search form submit
+    - new one way search -> sets prevquery to formdata, resets metadata, sets outgoing to results and returning to [],  sets chosen to nothing, sets error to error (maintains nothing?)
+    - new return results search (only return time changed) -> set prevquery to formdata, sets return to found (maintains outgoing / metadata, in theory chosen, in practice no?)
+    - new full search -> sets outgoing and returnign to results, metadata to metadata, prevquery to formdata, error to error, chosen to nothing (maintains nothing)
+- selecting an outgoing result -> sets returning to updated return results, error to error, sets chosen to chosen (maintains rest: metadata, outgoing, prevQuery)

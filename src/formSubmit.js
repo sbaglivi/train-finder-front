@@ -4,7 +4,7 @@ import format from 'date-fns/format';
 export const validateData = (data, setFormData, acceptedStations) => {
 	if (!validateDateTime(data.dateTime, setFormData))
 		return false
-	if (!validateDateTime(data.returnDateTime, setFormData, data.dateTime))
+	if (data.returnDateTime && !validateDateTime(data.returnDateTime, setFormData, data.dateTime))
 		return false
 	if (!acceptedStations.includes(data.origin)){
 		console.log(data.origin+' is not a valid station name')
@@ -65,21 +65,31 @@ export const stationNameToCamelcase = str => {
 	return newStr
 }
 
-export const post = async (path, body) => {
-	let response = await fetch(path, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Accept': 'application/json'
-		},
-		body: body
-	})
-	if (!response.ok){
-		console.log('Response was not ok while submitting');
-		return
+export const post = async (path, body, returning, dispatch) => {
+	if (returning) dispatch({type: 'toggleLoading'});
+	else dispatch({type: 'toggleLoadingAndReset'});
+	try {
+		let response = await fetch(path, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json'
+			},
+			body: body
+		})
+		if (!response.ok){
+			throw Error(`After posting to ${path} response was not ok`)
+		}
+		return await response.json()
+	} catch (e) {
+		console.log(e.message)	
+		if (!returning)
+			dispatch({type: 'requestFail', payload: {reqType: 'outgoing', error: e.message}});
+		else 
+			dispatch({type: 'requestFail', payload:{reqType: 'returning', error: e.message}});
 	}
-	return await response.json()
 }
+
 
 export const getRequestBodyForBothReturns = (formData, prevQuery) => {
     let {origin, destination, dateTime, returnDateTime, passengers} = formData;
@@ -87,6 +97,10 @@ export const getRequestBodyForBothReturns = (formData, prevQuery) => {
     let {inputValue, cookies: italoCookies} = prevQuery.return.italo;
     return {origin, destination, dateTime, returnDateTime, passengers, goingoutId: trainId, cartId, trenitaliaCookies, inputValue, italoCookies}
 }
+
+// Normally I: parse formdata, decide whether to make a request.
+// if I make the req: do req -> 'process data' -> if there is an error ? if there is no data? 
+// if req fails ? don't do anything rn
 
 /*
 const trenitaliaReturnRequest = async (formData, prevQuery, setTrains) => {
