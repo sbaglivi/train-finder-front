@@ -97,24 +97,27 @@ form {
   width: 10em;
 }
 ul {
-	position: absolute;
-	top: 100%;
-	padding: 0px;
-	margin: 0px;
-    background-color: white;
-    border-radius: 0px 0px 4px 4px;
-    border: 1px solid black;
-    border-top: none;
-    z-index: 999;
+  position: absolute;
+  top: 100%;
+  padding: 0px;
+  margin: 0px;
+  border-radius: 0px 0px 4px 4px;
+  border: 1px solid black;
+  border-top: none;
+  pointer-events: all;
 }
 ul * + * {
-  border-top: 1px solid #888888;
+  /*border-top: 1px solid #888888;*/
   margin-top: 2px;
 }
 li {
-    width: 10em;
-	list-style: none;
+  background-color: white;
+  width: 10em;
+  list-style: none;
   padding: 2px 4px;
+}
+li:hover {
+  background-color: #aaaaaa;
 }
 
 table {
