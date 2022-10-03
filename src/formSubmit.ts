@@ -72,7 +72,7 @@ export const post = async (path:string, body:BodyInit, returning:boolean, dispat
 	if (returning) dispatch({type: 'toggleLoading'});
 	else dispatch({type: 'toggleLoadingAndReset'});
 	try {
-		let response = await fetch(`http://localhost:3003/${path}`, {
+		let response = await fetch(`http://localhost:3003${path}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
