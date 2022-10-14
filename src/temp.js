@@ -1,8 +1,10 @@
 const parse = require('date-fns/parse')
 const format = require('date-fns/format')
+const formatISO = require('date-fns/formatISO')
 // import parse from 'date-fns/parse';
 // import format from 'date-fns/format';
 const referenceDate = new Date();
+console.log(formatISO(referenceDate));
 referenceDate.setHours(referenceDate.getHours()+1, 0, 0, 0);
 const onBlur = event => {
 	const possibleDateTimeFormats = ["dd/MM/yy HH", "dd/MM/yy H", "dd/MM/yyy"]

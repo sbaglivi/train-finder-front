@@ -43,7 +43,7 @@ const SearchForm = ({state, dispatch}:{state:State, dispatch: (action: Action) =
 			let field = activeElement.name;
 			setFormData(old => ({...old, [field]: value}));
 			setSearchResults([]);
-			if (activeElement.name = 'origin'){
+			if (activeElement.name === 'origin'){
 				let destinationInput = document.getElementById('destinationInput')
 				if(destinationInput) destinationInput.focus()
 			} else {
