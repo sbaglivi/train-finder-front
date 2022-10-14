@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import departureTimeSort from './departureTimeSort.js';
 import {post as postWithoutDispatch, stationNameToCamelcase} from './formSubmit'
 import {State, Action, Train} from './App';
@@ -15,18 +15,49 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 	const toggleShowMore = () => {
 		setShowMore(oldVal => oldVal === 'none' ? 'table-cell' : 'none')
 	}
+
+	// TODO When you click on a new field it instead just notices another click on the previous field before moving to the new one
+
 	const sortResults = (key:keyof Train) => {
 		updateSortOrder(key);
-		applySortOrder()
-		console.log(sortOrder)
 	}
 	const updateSortOrder = (key: keyof Train) => {
 		if (sortOrder.by === key){
-			setSortOrder(oldOrder => ({...oldOrder, asc: -1*oldOrder.asc}))
+			console.log(`setting order to {by: ${sortOrder.by}, asc: ${-1*sortOrder.asc}}`)
+			setSortOrder(oldOrder => ({by: oldOrder.by, asc: -1*oldOrder.asc}))
 		} else {
+			console.log(`setting order to {by: ${key}, asc: 1}`)
 			setSortOrder({by: key, asc: 1});
 		}
 	}
+	const priceSort = (a:number|string,b:number|string,asc:number) => {
+		if (a > b){
+			return asc;
+		} else if (b > a) {
+			return -1*asc;
+		}
+		return 0;
+	}
+
+	const arrivalTimeSort = (a:Train,b:Train,asc:number) => {
+		let [arrivalTimeNumA, arrivalTimeNumB] = [a,b].map(item => {
+			let timeString = item.arrivalTime.replace(':','');
+			let hourInt = parseInt(timeString.slice(0,2));
+			if (hourInt >= 0 && hourInt <= 5){  // exception hours are between 0 and 5
+				return (parseInt(timeString)+ 2400);
+			}
+			return parseInt(item.departureTime.replace(':',''));
+		})
+		if (arrivalTimeNumA === arrivalTimeNumB) return 0
+		return asc * (arrivalTimeNumA > arrivalTimeNumB ? 1 : -1);
+	}
+
+	const durationSort = (a:Train, b:Train, asc: number) => {
+		let [durationTimeA, durationTimeB] = [a,b].map(train => parseInt(train.duration.replace(':','')));
+		if (durationTimeA === durationTimeB) return 0;
+		return asc * (durationTimeA > durationTimeB ? 1 : -1);
+	}
+
 	const applySortOrder = () => {
 		let newOrder;
 		switch(sortOrder.by){
@@ -35,10 +66,36 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 				newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc));
 				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
 				break;
+			case 'arrivalTime':
+				newOrder = results;
+				newOrder.sort((a,b) => arrivalTimeSort(a,b,sortOrder.asc));
+				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				break;
+			case 'minPrice':
+				newOrder = results;
+				console.log(results.map(result => result.minPrice));
+				newOrder.sort((a,b) => priceSort(a.minPrice,b.minPrice,sortOrder.asc));
+				console.log(typeof results[0].minPrice);
+				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				break;
+			case 'company':
+				newOrder = results;
+				newOrder.sort((a,b) => a.company > b.company ? sortOrder.asc : (b.company > a.company ? -1 * sortOrder.asc : 0));
+				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				break;
+			case 'duration':
+				newOrder = results;
+				newOrder.sort((a,b) => durationSort(a,b,sortOrder.asc));
+				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				break;
 			default:
 				return;
 		}
 	}
+	useEffect(() => {
+		applySortOrder()
+		console.log(sortOrder)
+	}, [sortOrder]) // is this wrong?
 
 	function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], company:'italo'|'trenitalia'){
 		reqResults.results.sort((a,b) => departureTimeSort(a,b,1));
@@ -117,14 +174,14 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 		<thead>
 			<tr>
 				<th onClick={() => sortResults('departureTime')} >Partenza</th>
-				<th>Arrivo</th>
-				<th>Durata</th>
-				<th>Prezzo</th>
-				<th className='companyCol'>Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-				<th style={{display: showMore}}>Single</th>
-				<th style={{display: showMore}}>Adult</th>
-				<th style={{display: showMore}}>Young</th>
-				<th style={{display: showMore}}>Senior<span onClick={toggleShowMore}>&#8592;</span></th>
+				<th onClick={sortResults.bind(null, 'arrivalTime')} >Arrivo</th>
+				<th onClick={sortResults.bind(null, 'duration')} >Durata</th>
+				<th onClick={sortResults.bind(null, 'minPrice')} >Prezzo</th>
+				<th className='companyCol' onClick={sortResults.bind(null, 'company')} >Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
+				<th style={{display: showMore}} onClick={sortResults.bind(null, 'minIndividualPrice')} >Single</th>
+				<th style={{display: showMore}} onClick={sortResults.bind(null, 'young')} >Adult</th>
+				<th style={{display: showMore}} onClick={sortResults.bind(null, 'senior')} >Young</th>
+				<th style={{display: showMore}} onClick={sortResults.bind(null, 'adult')} >Senior<span onClick={toggleShowMore}>&#8592;</span></th>
 			</tr>
 		</thead>
 			<tbody>
