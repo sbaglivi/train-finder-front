@@ -1,7 +1,41 @@
 import parse from 'date-fns/parse';
 import format from 'date-fns/format';
-import {State, Action} from './App';
+import {State, Action, Train} from './App';
 import {Dispatch, SetStateAction} from 'react';
+
+export const priceSort = (a:number|string,b:number|string,asc:number) => {
+	if (a > b){
+		return asc;
+	} else if (b > a) {
+		return -1*asc;
+	}
+	return 0;
+}
+
+export const departureTimeSort = (a:Train,b:Train,asc:number) => {
+	let [departureTimeNumA, departureTimeNumB] = [a,b].map(item => parseInt(item.departureTime.replace(':','')))
+	if (departureTimeNumA === departureTimeNumB) return 0
+	return asc * (departureTimeNumA > departureTimeNumB ? 1 : -1);
+}
+
+export const arrivalTimeSort = (a:Train,b:Train,asc:number) => {
+	let [arrivalTimeNumA, arrivalTimeNumB] = [a,b].map(item => {
+		let timeString = item.arrivalTime.replace(':','');
+		let hourInt = parseInt(timeString.slice(0,2));
+		if (hourInt >= 0 && hourInt <= 5){  // exception hours are between 0 and 5
+			return (parseInt(timeString)+ 2400);
+		}
+		return parseInt(item.departureTime.replace(':',''));
+	})
+	if (arrivalTimeNumA === arrivalTimeNumB) return 0
+	return asc * (arrivalTimeNumA > arrivalTimeNumB ? 1 : -1);
+}
+
+export const durationSort = (a:Train, b:Train, asc: number) => {
+	let [durationTimeA, durationTimeB] = [a,b].map(train => parseInt(train.duration.replace(':','')));
+	if (durationTimeA === durationTimeB) return 0;
+	return asc * (durationTimeA > durationTimeB ? 1 : -1);
+}
 
 export const validateData = (data:{dateTime:string, returnDateTime:string, origin: string, destination: string, passengers: string}, setFormData: Dispatch<SetStateAction<State['prevQuery']['formData']>>, acceptedStations:string[]) => {
 	if (!validateDateTime(data.dateTime, setFormData))

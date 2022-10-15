@@ -1,7 +1,7 @@
 import {useState, useEffect} from 'react';
-import departureTimeSort from './departureTimeSort.js';
-import {post as postWithoutDispatch, stationNameToCamelcase} from './formSubmit'
+import {post as postWithoutDispatch, stationNameToCamelcase, arrivalTimeSort, durationSort, departureTimeSort, priceSort} from './utilityFunctions'
 import {State, Action, Train} from './App';
+
 
 const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action) => void }) => {
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime', asc: 1});
@@ -16,12 +16,10 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 		setShowMore(oldVal => oldVal === 'none' ? 'table-cell' : 'none')
 	}
 
-	// TODO When you click on a new field it instead just notices another click on the previous field before moving to the new one
-
 	const sortResults = (key:keyof Train) => {
 		updateSortOrder(key);
 	}
-	const updateSortOrder = (key: keyof Train) => {
+const updateSortOrder = (key: keyof Train) => {
 		if (sortOrder.by === key){
 			console.log(`setting order to {by: ${sortOrder.by}, asc: ${-1*sortOrder.asc}}`)
 			setSortOrder(oldOrder => ({by: oldOrder.by, asc: -1*oldOrder.asc}))
@@ -30,70 +28,35 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 			setSortOrder({by: key, asc: 1});
 		}
 	}
-	const priceSort = (a:number|string,b:number|string,asc:number) => {
-		if (a > b){
-			return asc;
-		} else if (b > a) {
-			return -1*asc;
-		}
-		return 0;
-	}
 
-	const arrivalTimeSort = (a:Train,b:Train,asc:number) => {
-		let [arrivalTimeNumA, arrivalTimeNumB] = [a,b].map(item => {
-			let timeString = item.arrivalTime.replace(':','');
-			let hourInt = parseInt(timeString.slice(0,2));
-			if (hourInt >= 0 && hourInt <= 5){  // exception hours are between 0 and 5
-				return (parseInt(timeString)+ 2400);
-			}
-			return parseInt(item.departureTime.replace(':',''));
-		})
-		if (arrivalTimeNumA === arrivalTimeNumB) return 0
-		return asc * (arrivalTimeNumA > arrivalTimeNumB ? 1 : -1);
-	}
-
-	const durationSort = (a:Train, b:Train, asc: number) => {
-		let [durationTimeA, durationTimeB] = [a,b].map(train => parseInt(train.duration.replace(':','')));
-		if (durationTimeA === durationTimeB) return 0;
-		return asc * (durationTimeA > durationTimeB ? 1 : -1);
-	}
-
-	const applySortOrder = () => {
+	const applySortOrder = (sortOrder : {by: string, asc: number}) => {
+		const {asc, by} = sortOrder;
 		let newOrder;
-		switch(sortOrder.by){
+		newOrder = results;
+		switch(by){
 			case 'departureTime':
-				newOrder = results;
-				newOrder.sort((a,b) => departureTimeSort(a,b,sortOrder.asc));
-				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				newOrder.sort((a,b) => departureTimeSort(a,b,asc));
 				break;
 			case 'arrivalTime':
-				newOrder = results;
-				newOrder.sort((a,b) => arrivalTimeSort(a,b,sortOrder.asc));
-				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				newOrder.sort((a,b) => arrivalTimeSort(a,b,asc));
 				break;
 			case 'minPrice':
-				newOrder = results;
-				console.log(results.map(result => result.minPrice));
-				newOrder.sort((a,b) => priceSort(a.minPrice,b.minPrice,sortOrder.asc));
-				console.log(typeof results[0].minPrice);
-				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				newOrder.sort((a,b) => priceSort(a.minPrice,b.minPrice,asc));
 				break;
 			case 'company':
-				newOrder = results;
-				newOrder.sort((a,b) => a.company > b.company ? sortOrder.asc : (b.company > a.company ? -1 * sortOrder.asc : 0));
-				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				newOrder.sort((a,b) => a.company > b.company ? asc : (b.company > a.company ? -1 * asc : 0));
 				break;
 			case 'duration':
-				newOrder = results;
-				newOrder.sort((a,b) => durationSort(a,b,sortOrder.asc));
-				dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+				newOrder.sort((a,b) => durationSort(a,b,asc));
 				break;
 			default:
 				return;
 		}
+		dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
 	}
+
 	useEffect(() => {
-		applySortOrder()
+		applySortOrder(sortOrder);
 		console.log(sortOrder)
 	}, [sortOrder]) // is this wrong?
 

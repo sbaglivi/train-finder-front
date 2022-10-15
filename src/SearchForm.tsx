@@ -1,7 +1,6 @@
 import {useState} from 'react';
 import Fuse from 'fuse.js';
-import departureTimeSort from './departureTimeSort.js';
-import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post as postWithoutDispatch} from './formSubmit';
+import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post as postWithoutDispatch, departureTimeSort} from './utilityFunctions';
 import {State, Action, Train} from './App'
 
 
