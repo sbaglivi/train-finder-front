@@ -122,3 +122,9 @@ ways the user changes current situation:
     - new return results search (only return time changed) -> set prevquery to formdata, sets return to found (maintains outgoing / metadata, in theory chosen, in practice no?)
     - new full search -> sets outgoing and returnign to results, metadata to metadata, prevquery to formdata, error to error, chosen to nothing (maintains nothing)
 - selecting an outgoing result -> sets returning to updated return results, error to error, sets chosen to chosen (maintains rest: metadata, outgoing, prevQuery)
+
+
+---
+Interesting ideas:
+- I could calculate a coefficient of how close trains departure times are to the desired ones and let the user sort by that
+- maybe a cumulative duratoin as well
