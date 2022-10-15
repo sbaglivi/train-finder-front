@@ -108,6 +108,7 @@ export type Train = {
 	company:  'italo' | 'trenitalia',
 	inputValue: string | undefined,
 	minIndividualPrice: number | string | undefined,
+	totPrice: number | undefined | string,
 	young: string | undefined,
 	senior: string | undefined,
 	adult: string | undefined,

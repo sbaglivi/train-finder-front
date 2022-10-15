@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {post as postWithoutDispatch, stationNameToCamelcase, arrivalTimeSort, durationSort, departureTimeSort, priceSort} from './utilityFunctions'
+import {post as postWithoutDispatch, stationNameToCamelcase, departureTimeSort, updateSortOrder, applySortOrder} from './utilityFunctions'
 import {State, Action, Train} from './App';
 
 
@@ -16,63 +16,59 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 		setShowMore(oldVal => oldVal === 'none' ? 'table-cell' : 'none')
 	}
 
-	const sortResults = (key:keyof Train) => {
-		updateSortOrder(key);
-	}
-const updateSortOrder = (key: keyof Train) => {
-		if (sortOrder.by === key){
-			console.log(`setting order to {by: ${sortOrder.by}, asc: ${-1*sortOrder.asc}}`)
-			setSortOrder(oldOrder => ({by: oldOrder.by, asc: -1*oldOrder.asc}))
-		} else {
-			console.log(`setting order to {by: ${key}, asc: 1}`)
-			setSortOrder({by: key, asc: 1});
-		}
-	}
-
-	const applySortOrder = (sortOrder : {by: string, asc: number}) => {
-		const {asc, by} = sortOrder;
-		let newOrder;
-		newOrder = results;
-		switch(by){
-			case 'departureTime':
-				newOrder.sort((a,b) => departureTimeSort(a,b,asc));
-				break;
-			case 'arrivalTime':
-				newOrder.sort((a,b) => arrivalTimeSort(a,b,asc));
-				break;
-			case 'minPrice':
-				newOrder.sort((a,b) => priceSort(a.minPrice,b.minPrice,asc));
-				break;
-			case 'company':
-				newOrder.sort((a,b) => a.company > b.company ? asc : (b.company > a.company ? -1 * asc : 0));
-				break;
-			case 'duration':
-				newOrder.sort((a,b) => durationSort(a,b,asc));
-				break;
-			default:
-				return;
-		}
+	const reorderResults = (newOrder: Train[]) => {
 		dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
 	}
 
 	useEffect(() => {
-		applySortOrder(sortOrder);
+		applySortOrder(sortOrder, results, reorderResults);
 		console.log(sortOrder)
 	}, [sortOrder]) // is this wrong?
 
-	function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], company:'italo'|'trenitalia'){
-		reqResults.results.sort((a,b) => departureTimeSort(a,b,1));
-		let companyReturnTrains = state.trains.returning.filter(train => train.company === company)
+	function getMinPriceIfExists(train:Train){
+		if  (typeof train.minPrice === 'number'){
+			if (typeof train.returnMinPrice === 'number') return Math.min(train.returnMinPrice, train.minPrice);
+			else return train.minPrice
+		}
+		return false;
+	}
+
+	function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], outgoingTrain:Train){
+		const company = outgoingTrain.company;
+		reqResults.results.sort((a,b) => departureTimeSort(a,b,1)); // if I sort one list I should also sort the other, othewise what's the point? also I should remove from the list trains thta have been matched
+		let companyReturnTrains = state.trains.returning.filter(train => train.company === company).sort((a,b) => departureTimeSort(a,b,1));
 		for (let newTrainData of reqResults.results){
 			let matchFound = false;
 			for (let trainData of companyReturnTrains){
 				if (newTrainData.departureTime === trainData.departureTime && newTrainData.arrivalTime === trainData.arrivalTime){
 					trainData.returnMinPrice = newTrainData.minPrice;
+					const outgoingMinPrice = outgoingTrain.minPrice;
+					const minReturnPrice = getMinPriceIfExists(trainData)
+					if (minReturnPrice && typeof outgoingMinPrice === 'number'){ 
+						//totalPrice = minReturnPrice + outgoingTrains[result.company].minPrice;
+						trainData.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
+						// totalPrice = Math.round((minReturnPrice + (outgoingTrains[result.company]!.minPrice as number))*10)/10;
+					} else {
+						trainData.totPrice = '/'
+					}
 					matchFound = true;
 					break;
-				}
+				} else if (departureTimeSort(trainData, newTrainData, 1) === 1 ){
+					break; // both arrays are sorted by depTime, if you are looking at a train with a later dep time you're not going to find it in following results.
+				} 
 			}
-			if (!matchFound) companyReturnTrains.push(newTrainData)
+			if (!matchFound){
+				console.log(newTrainData)
+				newTrainData.returnMinPrice = newTrainData.minPrice;
+				const outgoingMinPrice = state.trains.chosen[newTrainData.company]?.minPrice;
+				const minReturnPrice = getMinPriceIfExists(newTrainData)
+				if (minReturnPrice && typeof outgoingMinPrice === 'number'){
+					newTrainData.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
+				} else {
+					newTrainData.totPrice = '/'
+				}
+				companyReturnTrains.push(newTrainData) // train found in return trains req was not found in first req for (one way) coming back trains?
+			} 
 		}
 		let newReturningTrains = [...returningTrains.filter(train => train.company !== company), ...companyReturnTrains].sort((a,b) => departureTimeSort(a,b,1))
 		return newReturningTrains;
@@ -97,7 +93,7 @@ const updateSortOrder = (key: keyof Train) => {
 			reqResults = await post('/return', JSON.stringify(requestBody), true)
 			if(!reqResults) return;
 			if (reqResults.results.length){
-				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, train.company)
+				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, train)
 				let chosen = {...state.trains.chosen,  [train.company]: train}
 				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
 			} else 
@@ -136,15 +132,15 @@ const updateSortOrder = (key: keyof Train) => {
 		<table className={state.trains?.returning.length ? '' : 'fullWidth'}>
 		<thead>
 			<tr>
-				<th onClick={() => sortResults('departureTime')} >Partenza</th>
-				<th onClick={sortResults.bind(null, 'arrivalTime')} >Arrivo</th>
-				<th onClick={sortResults.bind(null, 'duration')} >Durata</th>
-				<th onClick={sortResults.bind(null, 'minPrice')} >Prezzo</th>
-				<th className='companyCol' onClick={sortResults.bind(null, 'company')} >Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onClick={toggleShowMore}>&#8594;</span></th>
-				<th style={{display: showMore}} onClick={sortResults.bind(null, 'minIndividualPrice')} >Single</th>
-				<th style={{display: showMore}} onClick={sortResults.bind(null, 'young')} >Adult</th>
-				<th style={{display: showMore}} onClick={sortResults.bind(null, 'senior')} >Young</th>
-				<th style={{display: showMore}} onClick={sortResults.bind(null, 'adult')} >Senior<span onClick={toggleShowMore}>&#8592;</span></th>
+				<th onClick={() => updateSortOrder('departureTime', setSortOrder)} >Partenza</th>
+				<th onClick={updateSortOrder.bind(null, 'arrivalTime', setSortOrder)} >Arrivo</th>
+				<th onClick={updateSortOrder.bind(null, 'duration', setSortOrder)} >Durata</th>
+				<th onClick={updateSortOrder.bind(null, 'minPrice', setSortOrder)} >Prezzo</th>
+				<th className='companyCol' onClick={updateSortOrder.bind(null, 'company', setSortOrder)} >Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onDoubleClick={toggleShowMore}>&#8594;</span></th>
+				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'minIndividualPrice', setSortOrder)} >Single</th>
+				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'young', setSortOrder)} >Adult</th>
+				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'senior', setSortOrder)} >Young</th>
+				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'adult', setSortOrder)} >Senior<span onClick={toggleShowMore}>&#8592;</span></th>
 			</tr>
 		</thead>
 			<tbody>

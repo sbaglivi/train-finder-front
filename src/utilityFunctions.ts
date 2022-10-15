@@ -3,7 +3,48 @@ import format from 'date-fns/format';
 import {State, Action, Train} from './App';
 import {Dispatch, SetStateAction} from 'react';
 
-export const priceSort = (a:number|string,b:number|string,asc:number) => {
+export const updateSortOrder = (key: keyof Train, setSortOrder:Function) => {
+	setSortOrder((oldOrder:{by: string, asc:number}) => {
+		if (oldOrder.by === key){
+			return {by: oldOrder.by, asc: -1*oldOrder.asc};
+		} else {
+			return {by: key, asc: 1}
+		}
+	})
+}
+
+export const applySortOrder = (sortOrder : {by: string, asc: number}, results: Train[], reorderResults:Function) => {
+	const {asc, by} = sortOrder;
+	let newOrder;
+	newOrder = results;
+	switch(by){
+		case 'departureTime':
+			newOrder.sort((a,b) => departureTimeSort(a,b,asc));
+			break;
+		case 'arrivalTime':
+			newOrder.sort((a,b) => arrivalTimeSort(a,b,asc));
+			break;
+		case 'minPrice':
+		case 'returnMinPrice':
+		case 'totPrice':
+			newOrder.sort((a,b) => priceSort(a[by], b[by], asc));
+			break;
+		case 'company':
+			newOrder.sort((a,b) => a.company > b.company ? asc : (b.company > a.company ? -1 * asc : 0));
+			break;
+		case 'duration':
+			newOrder.sort((a,b) => durationSort(a,b,asc));
+			break;
+		default:
+			return;
+	}
+	reorderResults(newOrder);
+}
+
+
+export const priceSort = (a:number|string|undefined, b:number|string|undefined, asc:number) => {
+	if (a === undefined) return 1;
+	if (b === undefined) return -1;
 	if (a > b){
 		return asc;
 	} else if (b > a) {
