@@ -6,28 +6,11 @@ const formatISO = require('date-fns/formatISO')
 const referenceDate = new Date();
 console.log(formatISO(referenceDate));
 referenceDate.setHours(referenceDate.getHours()+1, 0, 0, 0);
-const onBlur = event => {
-	const possibleDateTimeFormats = ["dd/MM/yy HH", "dd/MM/yy H", "dd/MM/yyy"]
-	const dateTimeFormat = "dd/MM/yy HH";
-	try {
-		console.log(event.target.value)
-		let parsedDate = parse(event.target.value, dateTimeFormat, referenceDate)
-		if (parsedDate < referenceDate) throw Error("Parsed date is before current date and time") 
-		if (isNaN(parsedDate)) throw Error("Invalid date");
-	} catch (err) {
-		console.log(err);
-		console.log(`Error while parsing date: ${event.target.value}.`);
-		setFormData(formData => ({...formData, dateTime: ''}));
-		return;
-	}
-} 
-
-
 
 function validateDateTime(str){
 	const possibleDateTimeFormats = ["dd/MM/yy HH", "dd/MM/yy"]
 	let errorText = ''
-	for (possibleFormat of possibleDateTimeFormats){
+	for (let possibleFormat of possibleDateTimeFormats){
 		try {
 			let parsedDate = parse(str, possibleFormat, referenceDate)
 			if (parsedDate < referenceDate) throw Error("Parsed date is before current date and time") 
@@ -41,8 +24,6 @@ function validateDateTime(str){
 	console.log(errorText)
 }
 
-
-
 console.log(validateDateTime('20/10/22'))
 
 /*
@@ -53,3 +34,44 @@ console.log(validateDateTime('20/10/22'))
  *
  *
  */
+
+// len 5 -> I want el (01)2(34) len 4 -> I want el 1 or 2, either works 
+let arr = [
+	{a: 5, b:6},
+	{a: 3, b:4},
+	{a: 2, b:3},
+	{a: 1, b:2},
+	{a: 9, b:10},
+]
+
+function compare(a,b){
+	if (a.a > b.a) return 1;
+	else if (a.a < b.a) return -1;
+	else return 0;
+}
+
+console.log(arr);
+arr.sort(compare);
+console.log(arr);
+
+
+// 1 -> put a after b (a > b), -1 -> put b after a (b > a), 0 => maintain order (equal)
+function binarySearch(array, element, compareFn){
+	let halfPoint = Math.round((array.length-1)/2);
+	let comparisonResult = compareFn(array[halfPoint], element);
+	console.log(array, comparisonResult)
+	if (array.length === 1) return ( (compareFn(array[0], element) === 0) ? array[0] : false);
+
+	if (comparisonResult === 1){ // this takes the lower value if length is even, on 4 elements it takes 1 etc
+		return binarySearch(array.slice(0, halfPoint), element, compareFn)
+	} else if (comparisonResult === -1 ) {
+		return binarySearch(array.slice(halfPoint, array.length), element, compareFn);
+	} else {
+		return array[halfPoint];
+	}
+}
+
+let searchRes = binarySearch(arr, {a: 8, c:7}, compare);
+console.log(searchRes);
+searchRes = binarySearch(arr, {a: 2, c:7}, compare);
+console.log(searchRes);

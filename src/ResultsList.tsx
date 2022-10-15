@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {post as postWithoutDispatch, stationNameToCamelcase, departureTimeSort, updateSortOrder, applySortOrder} from './utilityFunctions'
+import {post as postWithoutDispatch, stationNameToCamelcase, departureTimeSort, updateSortOrder, applySortOrder, binarySearch} from './utilityFunctions'
 import {State, Action, Train} from './App';
 
 
@@ -38,26 +38,12 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 		reqResults.results.sort((a,b) => departureTimeSort(a,b,1)); // if I sort one list I should also sort the other, othewise what's the point? also I should remove from the list trains thta have been matched
 		let companyReturnTrains = state.trains.returning.filter(train => train.company === company).sort((a,b) => departureTimeSort(a,b,1));
 		for (let newTrainData of reqResults.results){
-			let matchFound = false;
-			for (let trainData of companyReturnTrains){
-				if (newTrainData.departureTime === trainData.departureTime && newTrainData.arrivalTime === trainData.arrivalTime){
-					trainData.returnMinPrice = newTrainData.minPrice;
-					const outgoingMinPrice = outgoingTrain.minPrice;
-					const minReturnPrice = getMinPriceIfExists(trainData)
-					if (minReturnPrice && typeof outgoingMinPrice === 'number'){ 
-						//totalPrice = minReturnPrice + outgoingTrains[result.company].minPrice;
-						trainData.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
-						// totalPrice = Math.round((minReturnPrice + (outgoingTrains[result.company]!.minPrice as number))*10)/10;
-					} else {
-						trainData.totPrice = '/'
-					}
-					matchFound = true;
-					break;
-				} else if (departureTimeSort(trainData, newTrainData, 1) === 1 ){
-					break; // both arrays are sorted by depTime, if you are looking at a train with a later dep time you're not going to find it in following results.
-				} 
-			}
-			if (!matchFound){
+			// for some hellish reason if I defined the result of binarySearch as Type | Boolean (or Type | false) it would not work
+			// Hellish reason is probably that Boolean is a keyword for something else and boolean is the normal type. fml
+			let matchingTrain: Train | false = binarySearch(companyReturnTrains, newTrainData, departureTimeSort);
+
+			if (!matchingTrain){
+				console.log(matchingTrain);
 				console.log(newTrainData)
 				newTrainData.returnMinPrice = newTrainData.minPrice;
 				const outgoingMinPrice = state.trains.chosen[newTrainData.company]?.minPrice;
@@ -68,7 +54,19 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 					newTrainData.totPrice = '/'
 				}
 				companyReturnTrains.push(newTrainData) // train found in return trains req was not found in first req for (one way) coming back trains?
-			} 
+			} else {
+				matchingTrain.returnMinPrice = newTrainData.minPrice;
+				const outgoingMinPrice = outgoingTrain.minPrice;
+				const minReturnPrice = getMinPriceIfExists(matchingTrain)
+				if (minReturnPrice && typeof outgoingMinPrice === 'number'){ 
+					//totalPrice = minReturnPrice + outgoingTrains[result.company].minPrice;
+					matchingTrain.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
+					// totalPrice = Math.round((minReturnPrice + (outgoingTrains[result.company]!.minPrice as number))*10)/10;
+				} else {
+					matchingTrain.totPrice = '/'
+				}
+
+			}
 		}
 		let newReturningTrains = [...returningTrains.filter(train => train.company !== company), ...companyReturnTrains].sort((a,b) => departureTimeSort(a,b,1))
 		return newReturningTrains;
@@ -93,10 +91,12 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 			reqResults = await post('/return', JSON.stringify(requestBody), true)
 			if(!reqResults) return;
 			if (reqResults.results.length){
+				console.log('Results.length > 0, updating prices');
 				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, train)
 				let chosen = {...state.trains.chosen,  [train.company]: train}
 				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
 			} else 
+				console.log('Results.length <= 0, setting Error to '+reqResults.error);
 				dispatch({type: 'setError', payload: {error: reqResults.error}});
 		} catch (e) {
 			console.log('request for '+train.company+' returns failed')

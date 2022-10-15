@@ -41,6 +41,21 @@ export const applySortOrder = (sortOrder : {by: string, asc: number}, results: T
 	reorderResults(newOrder);
 }
 
+export function binarySearch<Type> (array: Type[], element: Type, compareFn: (a: Type, b: Type, asc: number) => number, asc: number = 1) : Type | false {
+	let halfPoint = Math.round((array.length-1)/2);
+	let comparisonResult = compareFn(array[halfPoint], element, asc);
+	// console.log(array, comparisonResult)
+	if (array.length === 1) return ( comparisonResult === 0 ? array[0] : false);
+
+	if (comparisonResult === 1){ // this takes the lower value if length is even, on 4 elements it takes 1 etc
+		return binarySearch(array.slice(0, halfPoint), element, compareFn)
+	} else if (comparisonResult === -1 ) {
+		return binarySearch(array.slice(halfPoint, array.length), element, compareFn);
+	} else {
+		return array[halfPoint];
+	}
+}
+
 
 export const priceSort = (a:number|string|undefined, b:number|string|undefined, asc:number) => {
 	if (a === undefined) return 1;
