@@ -133,3 +133,9 @@ Interesting ideas:
 if return price is = to oneway price then totprice should be lowest of outgoing trains + this train, without matching company, in that case I display a note
 
 Voglio che minPrice sia effettivamente il prezzo minimo ma che poi possa non essere utilizzato nel prezzo totale o voglio che sia quello utilizzato nel prezzo totale ma non necessariamente il minimo?
+
+
+{
+    milano-firenze: Train[],
+    roma-bologna: Train[dfsfmactempelapsedsllkh
+}
