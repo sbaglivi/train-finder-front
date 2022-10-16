@@ -23,6 +23,54 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
             </table>
         )
     }
+    const tbodyOnly = (content: React.ReactNode) => (
+        <table style={{flex: '0 0 48%'}}>
+            <tbody>
+                {content}
+            </tbody>
+        </table>
+    )
+    const heading = (
+        <div>
+            <div className='savedTripsTableContainer'>
+                <div className="headingColumn">
+                    <h3>Andata</h3>
+                        <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Partenza</th>
+                                <th>Arrivo</th>
+                                <th>Durata</th>
+                                <th>Prezzo</th>
+                                <th>Passeggeri</th>
+                                <th>Azienda</th>
+                                <th>X</th>
+                            </tr>
+                        </thead>
+                        </table>
+                    </div>
+                    <div className="headingColumn">
+                        <h3>Ritorno</h3>
+                        <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Partenza</th>
+                                <th>Arrivo</th>
+                                <th>Durata</th>
+                                <th>Prezzo</th>
+                                <th>Passeggeri</th>
+                                <th>Azienda</th>
+                                <th>X</th>
+                            </tr>
+                        </thead>
+                        </table>
+                    </div>
+                </div>
+        </div>
+    )
+
     for (let itinerary in savedTrains){
         let [origin, destination] = itinerary.split('-');
         // <td>{train.returning ? 'Ritorno' : 'Andata'}</td>
@@ -46,6 +94,7 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
             tr = trFromTrain(train);
             train.returning ? returningTr.push(tr) : outgoingTr.push(tr);
         };
+        /*
         results.push(
             <div key={itinerary} className='savedTripsRow'>
                 <p>{origin} - {destination}</p>
@@ -61,10 +110,21 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
                 </div>
             </div>
         )
+        */
+       results.push(
+        <div key={itinerary} className='savedTripsRow'>
+            <p>{origin} - {destination}</p>
+            <div className='savedTripsTableContainer'>
+                {tbodyOnly(outgoingTr)}
+                {tbodyOnly(returningTr)}
+            </div>
+        </div>
+       )
     }
     return (
         <div className='savedTripsContainer'>
-        {results}
+            {heading}
+            {results}
         </div>
     )
 }

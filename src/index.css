@@ -318,3 +318,6 @@ thead > tr {
   align-items: center;
   width: 100%;
 }
+.headingColumn {
+  flex: 0 0 48%;
+}
