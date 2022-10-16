@@ -128,3 +128,8 @@ ways the user changes current situation:
 Interesting ideas:
 - I could calculate a coefficient of how close trains departure times are to the desired ones and let the user sort by that
 - maybe a cumulative duratoin as well
+
+
+if return price is = to oneway price then totprice should be lowest of outgoing trains + this train, without matching company, in that case I display a note
+
+Voglio che minPrice sia effettivamente il prezzo minimo ma che poi possa non essere utilizzato nel prezzo totale o voglio che sia quello utilizzato nel prezzo totale ma non necessariamente il minimo?

@@ -6,6 +6,8 @@
   box-sizing: border-box;
 }
 
+
+
 body, html {
   min-height: 100vh;
   max-width: 100vw;
@@ -123,6 +125,10 @@ li:hover {
 table {
   border-collapse: collapse;
   width: 100%;
+  --lighter-rows-color: hsl(0, 0%, 87%);
+  --darker-rows-color: hsl(0, 0%, 80%);
+  --lighter-rows-color-hover: hsl(0, 0%, 67%);
+  --darker-rows-color-hover: hsl(0,0%,60%);
 }
 .tableDiv {
   text-align: center;
@@ -132,16 +138,21 @@ table {
 .fullWidth {
   flex: 0 0 100%;
 }
-tr:nth-of-type(even){
-  background-color: #cccccc
-}
 tr {
   height: 36px;
-  background-color: #dddddd;
+  background-color: var(--lighter-rows-color);
 }
-tbody tr:hover {
+th {
   cursor: pointer;
-  filter: brightness(70%);
+}
+tbody > tr:nth-of-type(even){
+  background-color: var(--darker-rows-color);
+}
+tbody > tr:hover {
+  background-color: var(--lighter-rows-color-hover);
+}
+tbody > tr:nth-of-type(even):hover {
+  background-color: var(--darker-rows-color-hover);
 }
 .trenitaliaSelected {
   background-color: rgb(255,200,200) !important;
@@ -158,6 +169,10 @@ thead > tr {
 }
 .loadingAnimation * {
   stroke-width: 1px !important;
+}
+
+.mobileHint {
+  visibility: hidden;
 }
 
 @media (max-width: 950px) and (min-width: 480px) {
@@ -218,6 +233,7 @@ thead > tr {
   }
 }
 
+
 @media (max-width: 480px) {
   form {
     display: flex;
@@ -253,4 +269,52 @@ thead > tr {
     margin-top: 2em;
     margin-bottom: 1em;
   }
+  .mobileHint {
+    visibility: visible;
+  }
+  .roundtripOnly > span {
+    visibility: hidden !important;
+  }
+}
+
+.roundtripOnly {
+  position: relative;
+  z-index: 1;
+}
+.roundtripOnly > span {
+  /* display: none; */
+  visibility: hidden;
+  position: absolute;
+  left: 3em;
+  top: 1em;
+  /* background-color: #eee; */
+  padding: 4px;
+  width: min(180px,25vw);
+  background-color: var(--lighter-rows-color);
+  border: 1px solid black;
+}
+.roundtripOnly:hover {
+  z-index: 2;
+}
+.roundtripOnly:hover > span {
+  /* display: block; */
+  visibility: visible;
+}
+
+.savedTripsContainer {
+  width: min(1080px, 95vw);
+}
+.savedTripsTableContainer {
+  display: flex;
+  width: 100%;
+  justify-content: space-evenly;
+}
+.savedTripsColumn {
+  flex: 0 0 48%;
+}
+.savedTripsRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }

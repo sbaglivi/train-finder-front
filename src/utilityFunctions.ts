@@ -25,7 +25,6 @@ export const applySortOrder = (sortOrder : {by: string, asc: number}, results: T
 			newOrder.sort((a,b) => arrivalTimeSort(a,b,asc));
 			break;
 		case 'minPrice':
-		case 'returnMinPrice':
 		case 'totPrice':
 			newOrder.sort((a,b) => priceSort(a[by], b[by], asc));
 			break;

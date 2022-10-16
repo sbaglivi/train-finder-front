@@ -1,9 +1,10 @@
 import {useState, useEffect} from 'react';
 import {post as postWithoutDispatch, stationNameToCamelcase, departureTimeSort, updateSortOrder, applySortOrder, binarySearch} from './utilityFunctions'
 import {State, Action, Train} from './App';
+import { intervalToDuration } from 'date-fns';
 
 
-const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action) => void }) => {
+const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (action: Action) => void, saveTrain: (train: Train, invert: boolean) => void }) => {
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime', asc: 1});
 	let [showMore, setShowMore] = useState('none')
 
@@ -27,16 +28,25 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 
 	function getMinPriceIfExists(train:Train){
 		if  (typeof train.minPrice === 'number'){
-			if (typeof train.returnMinPrice === 'number') return Math.min(train.returnMinPrice, train.minPrice);
+			if (typeof train.minRoundtripPrice === 'number') return Math.min(train.minRoundtripPrice, train.minPrice);
 			else return train.minPrice
 		}
 		return false;
 	}
 
-	function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], outgoingTrain:Train){
-		const company = outgoingTrain.company;
+	function getMinOutgoingPrice(outgoingTrains: State['trains']['chosen']):number{ // at least one of the two is NOT undefined
+		if (outgoingTrains.italo === undefined){
+			return outgoingTrains.trenitalia!.minPrice; // ! used because I know at least 1 is defined
+		} else {
+			if (outgoingTrains.trenitalia === undefined) return outgoingTrains.italo.minPrice;
+			return Math.min(outgoingTrains.italo.minPrice, outgoingTrains.trenitalia.minPrice);
+		}
+	}
+
+	function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], outgoingTrains: State['trains']['chosen'], company: 'italo' | 'trenitalia'){
 		reqResults.results.sort((a,b) => departureTimeSort(a,b,1)); // if I sort one list I should also sort the other, othewise what's the point? also I should remove from the list trains thta have been matched
 		let companyReturnTrains = state.trains.returning.filter(train => train.company === company).sort((a,b) => departureTimeSort(a,b,1));
+		let outgoingTrain:Train = outgoingTrains[company]!; // This should always be defined because it's the train from which search results were generated
 		for (let newTrainData of reqResults.results){
 			// for some hellish reason if I defined the result of binarySearch as Type | Boolean (or Type | false) it would not work
 			// Hellish reason is probably that Boolean is a keyword for something else and boolean is the normal type. fml
@@ -45,27 +55,22 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 			if (!matchingTrain){
 				console.log(matchingTrain);
 				console.log(newTrainData)
-				newTrainData.returnMinPrice = newTrainData.minPrice;
-				const outgoingMinPrice = state.trains.chosen[newTrainData.company]?.minPrice;
-				const minReturnPrice = getMinPriceIfExists(newTrainData)
-				if (minReturnPrice && typeof outgoingMinPrice === 'number'){
-					newTrainData.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
-				} else {
-					newTrainData.totPrice = '/'
-				}
+				newTrainData.minRoundtripPrice = newTrainData.minPrice;
+				newTrainData.totPrice = Math.round((newTrainData.minPrice + outgoingTrain.minPrice)*10)/10;
 				companyReturnTrains.push(newTrainData) // train found in return trains req was not found in first req for (one way) coming back trains?
 			} else {
-				matchingTrain.returnMinPrice = newTrainData.minPrice;
-				const outgoingMinPrice = outgoingTrain.minPrice;
-				const minReturnPrice = getMinPriceIfExists(matchingTrain)
-				if (minReturnPrice && typeof outgoingMinPrice === 'number'){ 
-					//totalPrice = minReturnPrice + outgoingTrains[result.company].minPrice;
-					matchingTrain.totPrice = Math.round((minReturnPrice + outgoingMinPrice)*10)/10;
-					// totalPrice = Math.round((minReturnPrice + (outgoingTrains[result.company]!.minPrice as number))*10)/10;
+				matchingTrain.minRoundtripPrice = newTrainData.minPrice;
+				// this is not perfect, ideally the back end would return the oneway price
+				if (matchingTrain.minOnewayPrice === undefined) matchingTrain.minOnewayPrice = matchingTrain.minPrice; 
+				matchingTrain.minPrice = Math.min(matchingTrain.minOnewayPrice, matchingTrain.minRoundtripPrice);
+				let minOutgoingPrice = getMinOutgoingPrice(outgoingTrains);
+				if (matchingTrain.minOnewayPrice <= matchingTrain.minRoundtripPrice){ // no AR offers, can also choose outgoing train of other company
+					matchingTrain.totPrice = Math.round((minOutgoingPrice + matchingTrain.minPrice)*10)/10;
 				} else {
-					matchingTrain.totPrice = '/'
+					let minMixedPrice = minOutgoingPrice + matchingTrain.minOnewayPrice;
+					let minRoundtripPrice = outgoingTrain.minPrice + matchingTrain.minRoundtripPrice;
+					matchingTrain.totPrice = Math.min(minMixedPrice, minRoundtripPrice);
 				}
-
 			}
 		}
 		let newReturningTrains = [...returningTrains.filter(train => train.company !== company), ...companyReturnTrains].sort((a,b) => departureTimeSort(a,b,1))
@@ -92,8 +97,8 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 			if(!reqResults) return;
 			if (reqResults.results.length){
 				console.log('Results.length > 0, updating prices');
-				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, train)
 				let chosen = {...state.trains.chosen,  [train.company]: train}
+				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
 				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
 			} else 
 				console.log('Results.length <= 0, setting Error to '+reqResults.error);
@@ -111,7 +116,8 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 			className = state.trains.chosen[result.company]?.id === result.id ? (result.company === 'italo' ? 'italoSelected' : 'trenitaliaSelected') : ''
 		}
 		return (
-			<tr key={result.id} className={className} onDoubleClick={roundtrip ? searchReturn.bind(null, result) : undefined}>
+			<tr key={result.id} className={className} onDoubleClick={saveTrain.bind(null, result, false)}> {/* Have to pass it explicitly otherwise the event gets passed and since it's an object it's always truthy */}
+			{/* <tr key={result.id} className={className} onDoubleClick={roundtrip ? searchReturn.bind(null, result) : undefined}> */}
 				<td>{result.departureTime}</td>
 				<td>{result.arrivalTime}</td>
 				<td>{result.duration}</td>
@@ -125,7 +131,7 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 		)
 	})
 	
-
+	const dev = false;
 	return (
 		<div className='tableDiv'>
 		<h2>Andata</h2>
@@ -136,7 +142,7 @@ const ResultsList = ({state, dispatch} : {state:State, dispatch: (action: Action
 				<th onClick={updateSortOrder.bind(null, 'arrivalTime', setSortOrder)} >Arrivo</th>
 				<th onClick={updateSortOrder.bind(null, 'duration', setSortOrder)} >Durata</th>
 				<th onClick={updateSortOrder.bind(null, 'minPrice', setSortOrder)} >Prezzo</th>
-				<th className='companyCol' onClick={updateSortOrder.bind(null, 'company', setSortOrder)} >Azienda <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onDoubleClick={toggleShowMore}>&#8594;</span></th>
+				<th className='companyCol' onClick={updateSortOrder.bind(null, 'company', setSortOrder)} >Azienda {dev ? <span style={{display: showMore === 'table-cell' ? 'none' : 'inline'}} onDoubleClick={toggleShowMore}>&#8594;</span> : null}</th>
 				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'minIndividualPrice', setSortOrder)} >Single</th>
 				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'young', setSortOrder)} >Adult</th>
 				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'senior', setSortOrder)} >Young</th>
