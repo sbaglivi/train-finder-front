@@ -83,8 +83,10 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 			return;
 		}
 		const {prevQuery: {formData: {origin, destination, dateTime, returnDateTime, passengers}, time}, metadata: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = state;
-		if ((Date.now() - time)/1000 > 300) 
+		if ((Date.now() - time)/1000 > 300){
 			console.log('More than 5 minutes passed since original request, might be too much!')
+			return;
+		} 
 		let requestBodyBase = {origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company: train.company}
 		let requestBody;
 		let reqResults;

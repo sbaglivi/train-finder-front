@@ -1,6 +1,6 @@
 import React from "react";
 import {TrainWD} from "./App";
-const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function, savedTrains: {[index: string]: TrainWD[]}}) => {
+const SavedList = ({deleteSavedTrain, savedTrains, deleteSavedItinerary}: {deleteSavedTrain: Function, savedTrains: {[index: string]: TrainWD[]}, deleteSavedItinerary: (hash:string) => void}) => {
     let results = [];
     const table = (content:React.ReactNode) => {
         return (
@@ -23,6 +23,7 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
             </table>
         )
     }
+
     const tbodyOnly = (content: React.ReactNode) => (
         <table style={{flex: '0 0 48%'}}>
             <tbody>
@@ -30,6 +31,7 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
             </tbody>
         </table>
     )
+
     const heading = (
         <div>
             <div className='savedTripsTableContainer'>
@@ -71,6 +73,7 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
         </div>
     )
 
+    let first = true;
     for (let itinerary in savedTrains){
         let [origin, destination] = itinerary.split('-');
         // <td>{train.returning ? 'Ritorno' : 'Andata'}</td>
@@ -111,19 +114,39 @@ const SavedList = ({deleteSavedTrain, savedTrains}: {deleteSavedTrain: Function,
             </div>
         )
         */
-       results.push(
-        <div key={itinerary} className='savedTripsRow'>
-            <p>{origin} - {destination}</p>
-            <div className='savedTripsTableContainer'>
-                {tbodyOnly(outgoingTr)}
-                {tbodyOnly(returningTr)}
+       if (first) {
+        results.push(
+            <div key={itinerary} className='savedTripsRow'>
+                <p>{origin} - {destination} <span onClick={deleteSavedItinerary.bind(null, itinerary)}>X</span></p>
+                <div className='savedTripsTableContainer'>
+                    <div className='savedTripsColumn'>
+                        <p>Andata</p>
+                        {table(outgoingTr)}
+                    </div>
+                    <div className='savedTripsColumn'>
+                        <p>Ritorno</p>
+                        {table(returningTr)}
+                    </div>
+                </div>
             </div>
-        </div>
-       )
+        )
+
+        first = false;
+       } else {
+
+        results.push(
+            <div key={itinerary} className='savedTripsRow'>
+                <p>{origin} - {destination} <span onClick={deleteSavedItinerary.bind(null, itinerary)}>X</span></p>
+                <div className='savedTripsTableContainer'>
+                    {tbodyOnly(outgoingTr)}
+                    {tbodyOnly(returningTr)}
+                </div>
+            </div>
+        )
+       }
     }
     return (
         <div className='savedTripsContainer'>
-            {heading}
             {results}
         </div>
     )

@@ -321,3 +321,22 @@ thead > tr {
 .headingColumn {
   flex: 0 0 48%;
 }
+.prevSearchesDiv {
+  display: flex;
+  justify-content: center;
+  column-gap: 1em;
+}
+.prevSearchDiv {
+  cursor: pointer;
+  padding: 8px;
+  border: 1px solid black;
+  user-select: none;
+  border-radius: 8px;
+}
+
+.prevSearchDiv p {
+  margin-block: 4px;
+}
+.prevSearchDiv:hover {
+  background-color: #aaaaaa;
+}
