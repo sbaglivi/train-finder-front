@@ -149,7 +149,6 @@ manca codice per hint (prezzo ritorno)
 codice per menu tasto destro
 
 current issues:
-all ths are shown, none are being hidden / collapsed. 
 Somewhere a key parameter is still missing
 I need to make  2 params on table optional (only needed on one of the two)
 Style is not being applied correctly to table header

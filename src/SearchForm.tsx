@@ -4,7 +4,7 @@ import {validateData, validateDateTime, getDifferentFields, stationNameToCamelca
 import {State, Action, Train} from './App'
 
 
-const SearchForm = ({state, dispatch}:{state:State, dispatch: (action: Action) => void}) => {
+const SearchForm = ({previousFormData, dispatch}:{previousFormData: State['prevQuery']['formData'], dispatch: (action: Action) => void}) => {
 	const [formData, setFormData] = useState({origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100'});
 	const [searchResults, setSearchResults] = useState<string[]>([]);
 	const [ulOffset, setUlOffset] = useState({left: 0, top: 0});
@@ -71,7 +71,7 @@ const SearchForm = ({state, dispatch}:{state:State, dispatch: (action: Action) =
 		}
 
 		let oneWay = !formData.returnDateTime;
-		let differentFields:string[] | [] = getDifferentFields(state.prevQuery.formData, formData)
+		let differentFields:string[] | [] = getDifferentFields(previousFormData, formData)
 		if (differentFields.length === 0)
 			return;
 		let currentTimestamp = Date.now() 

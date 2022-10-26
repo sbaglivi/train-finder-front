@@ -343,15 +343,15 @@ return (
 		<>
 			{!state.trains?.outgoing.length ? <h1>TrainFinder</h1> : null}
 			{Object.keys(state.trains.saved).length ? <SavedList savedTrains={state.trains?.saved} deleteSavedTrain={deleteSavedTrain} deleteSavedItinerary={deleteSavedItinerary}/> : null}
-			<SearchForm state={state} dispatch={dispatch}/>
+			<SearchForm previousFormData={state.prevQuery.formData} dispatch={dispatch}/>
 			<PreviousSearches previousSearches={state.previousSearches} loadSearch={loadSearch} deleteSearch={deleteSearch} />
 			{state.loading ? <BallTriangle height={100} width={100} color='black' radius={5} wrapperClass='loadingAnimation' />: null}
 			{state.error ? <p style={{color: 'darkred'}}>{state.error}</p> : null}
 			<div className='container' >
 				{/* {state.trains.outgoing.length ? <ResultsList state={state} dispatch={dispatch} saveTrain={saveTrain} /> : null}
 				{state.trains.returning.length ? <ReturnResultsTable results={state.trains.returning} reorderResults={(newOrder: Train[]):void => dispatch({type: 'reorderResults', payload: {direction: 'returning', newOrder}})} outgoingTrains={state.trains.chosen} saveTrain={saveTrain}/> : null} */}
-				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} /> : null }
-				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} outgoingSelected={state.trains.chosen} searchReturn={() => console.log("Should not be calling searchreturn from return table")}/> : null }
+				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} returnResults={state.trains.returning.length > 0} /> : null }
+				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} /> : null }
 				{/* need to set search return as optional */}
 			</div>
 		</>

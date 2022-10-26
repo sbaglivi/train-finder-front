@@ -136,7 +136,8 @@ table {
   user-select: none;
 }
 .fullWidth {
-  flex: 0 0 100%;
+  flex: 0 0 96%;
+  margin-inline: auto;
 }
 tr {
   height: 36px;
@@ -307,7 +308,7 @@ thead > tr {
 .savedTripsTableContainer {
   display: flex;
   width: 100%;
-  justify-content: space-evenly;
+  justify-content: space-between;
 }
 .savedTripsColumn {
   flex: 0 0 48%;
