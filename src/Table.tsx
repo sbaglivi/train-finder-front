@@ -1,5 +1,4 @@
 import {Train, State, Action} from './App';
-import { addRoundtripPrices, stationNameToCamelcase} from './utilityFunctions';
 import {useState, useEffect} from 'react';
 
 
@@ -22,38 +21,13 @@ let developmentFields: Field[] = [
     {key: "young", displayedName: "Giovane(T)"},
 ]
 
-const Table = ({trains, isReturning, isDev, dispatch}:{trains:Train[], isReturning: boolean, isDev: boolean, dispatch: (action: Action) => void}) => {
+const Table = ({trains, isReturning, dispatch, searchReturn}:{trains:Train[], isReturning: boolean, dispatch: (action: Action) => void, searchReturn: (train:Train) => void}) => {
+    const isDev = true;
+
     const logTrain = () => {
         let train = trains.find(train => train.id === contextMenuState.clickedTrainId)
         if (train) console.log(train)
     }
-
-	const searchReturn = async (train:Train) => {
-		if (state.trains.chosen[train.company] === train){
-			console.log('The train you clicked on is already the one selected')
-			return;
-		}
-		const {prevQuery: {formData: {origin, destination, dateTime, returnDateTime, passengers}, time}, metadata: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = state;
-		if ((Date.now() - time)/1000 > 300){
-			console.log('More than 5 minutes passed since original request, might be too much!')
-			return;
-		} 
-		let requestBodyBase = {origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company: train.company}
-        let requestBody = (train.company === 'trenitalia') ? {...requestBodyBase, goingoutId: train.id, cartId, cookies: trenitaliaCookies} : {...requestBodyBase, inputValue: train.inputValue, cookies: italoCookies};
-		try {
-			let reqResults = await post('/return', JSON.stringify(requestBody), true)
-            if (reqResults?.results?.length){
-				console.log('Results.length > 0, updating prices');
-				let chosen = {...state.trains.chosen,  [train.company]: train}
-				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
-				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
-			} else 
-				console.log('Results.length <= 0, setting Error to '+reqResults.error);
-				dispatch({type: 'setError', payload: {error: reqResults.error}});
-		} catch (e) {
-			console.log('request for '+train.company+' returns failed')
-		}
-	}
 
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime' as keyof Train, asc: 1});
 	let [contextMenuState, setContextMenuState] = useState({position: {x: 0, y: 0}, clickedTrainId: null, visible: false});

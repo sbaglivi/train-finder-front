@@ -1,11 +1,12 @@
 import SearchForm from './SearchForm';
 import SavedList from './SavedList';
+import Table from './Table';
 import ResultsList from './ResultsList';
 import ReturnResultsTable from './ReturnResultsTable';
 import {useReducer} from 'react';
 import {BallTriangle} from 'react-loader-spinner';
 import PreviousSearches from './PreviousSearches';
-import { applySortOrder } from './utilityFunctions';
+import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices} from './utilityFunctions';
 
 export type Action = {
 	type: 'onewaySearch',
@@ -307,18 +308,39 @@ const App = () => {
 		dispatch({type: 'loadSearch', payload: {search}});
 		return;
 	}
-	/*  CURRENT STATE OF THINGS:
-	the basic save functionality is done but:
-	- needs styling
-	- maybe I could make only one table for outgoing and one table for returning with <p>s splitting rows up? not sure if it would look trash
 
-	
-
-	*/ 
 	function deleteSearch(search: PreviousSearch){
 		dispatch({type: 'deleteSearch', payload: {search}});
 		return;
 	}
+
+	const searchReturn = async (train:Train) => {
+		if (state.trains.chosen[train.company] === train){
+			console.log('The train you clicked on is already the one selected')
+			return;
+		}
+		const {prevQuery: {formData: {origin, destination, dateTime, returnDateTime, passengers}, time}, metadata: { italo: { cookies: italoCookies }, trenitalia: {cookies: trenitaliaCookies, cartId}}} = state;
+		if ((Date.now() - time)/1000 > 300){
+			console.log('More than 5 minutes passed since original request, might be too much!')
+			return;
+		} 
+		let requestBodyBase = {origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company: train.company}
+        let requestBody = (train.company === 'trenitalia') ? {...requestBodyBase, goingoutId: train.id, cartId, cookies: trenitaliaCookies} : {...requestBodyBase, inputValue: train.inputValue, cookies: italoCookies};
+		try {
+			let reqResults = await post('/return', JSON.stringify(requestBody), true, dispatch)
+            if (reqResults?.results?.length){
+				console.log('Results.length > 0, updating prices');
+				let chosen = {...state.trains.chosen,  [train.company]: train}
+				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
+				dispatch({type: 'selectOutgoingTrip', payload: {returning: newReturningTrains, chosen, error: reqResults.error}})
+			} else 
+				console.log('Results.length <= 0, setting Error to '+reqResults.error);
+				dispatch({type: 'setError', payload: {error: reqResults.error}});
+		} catch (e) {
+			console.log('request for '+train.company+' returns failed')
+		}
+	}
+
 return (
 		<>
 			{!state.trains?.outgoing.length ? <h1>TrainFinder</h1> : null}
@@ -328,8 +350,11 @@ return (
 			{state.loading ? <BallTriangle height={100} width={100} color='black' radius={5} wrapperClass='loadingAnimation' />: null}
 			{state.error ? <p style={{color: 'darkred'}}>{state.error}</p> : null}
 			<div className='container' >
-				{state.trains.outgoing.length ? <ResultsList state={state} dispatch={dispatch} saveTrain={saveTrain} /> : null}
-				{state.trains.returning.length ? <ReturnResultsTable results={state.trains.returning} reorderResults={(newOrder: Train[]):void => dispatch({type: 'reorderResults', payload: {direction: 'returning', newOrder}})} outgoingTrains={state.trains.chosen} saveTrain={saveTrain}/> : null}
+				{/* {state.trains.outgoing.length ? <ResultsList state={state} dispatch={dispatch} saveTrain={saveTrain} /> : null}
+				{state.trains.returning.length ? <ReturnResultsTable results={state.trains.returning} reorderResults={(newOrder: Train[]):void => dispatch({type: 'reorderResults', payload: {direction: 'returning', newOrder}})} outgoingTrains={state.trains.chosen} saveTrain={saveTrain}/> : null} */}
+				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} searchReturn={searchReturn} /> : null }
+				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} searchReturn={() => console.log("Should not be calling searchreturn from return table")}/> : null }
+				{/* need to set search return as optional */}
 			</div>
 		</>
 	)
