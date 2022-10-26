@@ -21,7 +21,7 @@ let developmentFields: Field[] = [
     {key: "young", displayedName: "Giovane(T)"},
 ]
 
-const Table = ({trains, isReturning, dispatch, searchReturn}:{trains:Train[], isReturning: boolean, dispatch: (action: Action) => void, searchReturn: (train:Train) => void}) => {
+const Table = ({trains, isReturning, dispatch, searchReturn, outgoingSelected}:{trains:Train[], isReturning: boolean, dispatch: (action: Action) => void, searchReturn: (train:Train) => void, outgoingSelected: State['trains']['chosen']}) => {
     const isDev = true;
 
     const logTrain = () => {
@@ -32,7 +32,6 @@ const Table = ({trains, isReturning, dispatch, searchReturn}:{trains:Train[], is
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime' as keyof Train, asc: 1});
 	let [contextMenuState, setContextMenuState] = useState({position: {x: 0, y: 0}, clickedTrainId: null, visible: false});
     let showMore = 'none';
-    let chosenTrains: State['trains']['chosen'];                        // FIX THESE
     let isRoundtrip = false;                                           // FIX THESE 
 	let hintNeeded = false;
 
@@ -85,12 +84,12 @@ const Table = ({trains, isReturning, dispatch, searchReturn}:{trains:Train[], is
     }
     const minPriceRequiresRoundtrip = (train:Train) => train.minOnewayPrice && train.minPrice !== train.minOnewayPrice;
 
-    let ths = defaultFields.map(field => <th onClick={sortResults.bind(null, field.key)}>{field.displayedName}</th>)
+    let ths = defaultFields.map((field,index) => <th key={index} onClick={sortResults.bind(null, field.key)}>{field.displayedName}</th>)
     if (isReturning) ths.push(<th onClick={updateSortOrder.bind(null, returnField.key, setSortOrder)}>{returnField.displayedName}</th>)
-    if (isDev) ths = [...ths, ...developmentFields.map(field => <th onClick={updateSortOrder.bind(null, field.key, setSortOrder)}>{field.displayedName}</th>)]
+    if (isDev) ths = [...ths, ...developmentFields.map(field => <th style={{display: showMore}} onClick={updateSortOrder.bind(null, field.key, setSortOrder)}>{field.displayedName}</th>)]
     let trs =  trains.map(train => {
         return (
-            <tr key={train.id} data-id={train.id} className={(!isReturning && train.id === chosenTrains[train.company]?.id) ? `${train.company}Selected` : ''} onDoubleClick={(!isReturning && isRoundtrip) ? searchReturn.bind(null, train) : undefined}>
+            <tr key={train.id} data-id={train.id} className={(!isReturning && train.id === outgoingSelected[train.company]?.id) ? `${train.company}Selected` : ''} onDoubleClick={(!isReturning && isRoundtrip) ? searchReturn.bind(null, train) : undefined}>
                 {defaultFields.map(field => {
                     if (isReturning && field.key === "minPrice" && minPriceRequiresRoundtrip(train)) {
                         if (!hintNeeded) hintNeeded = true;
@@ -98,7 +97,7 @@ const Table = ({trains, isReturning, dispatch, searchReturn}:{trains:Train[], is
                     }
                     return <td>{train[field.key]}</td>
                 })}
-                {isReturning ? <td>train[returnField.key]</td> : null}
+                {isReturning ? <td>{train[returnField.key]}</td> : null}
                 {isDev ? developmentFields.map(field => <td style={{display: showMore}}>{train[field.key]}</td>) : null}
             </tr>
         )

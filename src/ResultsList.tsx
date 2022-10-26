@@ -23,11 +23,11 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 	}
 
 	const reorderResults = (newOrder: Train[]) => {
-		dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
+		// dispatch({type: 'reorderResults', payload: {direction: 'outgoing', newOrder}});
 	}
 
 	useEffect(() => {
-		applySortOrder(sortOrder, results, reorderResults);
+		// applySortOrder(sortOrder, results, reorderResults);
 		console.log(sortOrder)
 	}, [sortOrder]) // is this wrong?
 

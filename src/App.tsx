@@ -1,8 +1,6 @@
 import SearchForm from './SearchForm';
 import SavedList from './SavedList';
 import Table from './Table';
-import ResultsList from './ResultsList';
-import ReturnResultsTable from './ReturnResultsTable';
 import {useReducer} from 'react';
 import {BallTriangle} from 'react-loader-spinner';
 import PreviousSearches from './PreviousSearches';
@@ -352,8 +350,8 @@ return (
 			<div className='container' >
 				{/* {state.trains.outgoing.length ? <ResultsList state={state} dispatch={dispatch} saveTrain={saveTrain} /> : null}
 				{state.trains.returning.length ? <ReturnResultsTable results={state.trains.returning} reorderResults={(newOrder: Train[]):void => dispatch({type: 'reorderResults', payload: {direction: 'returning', newOrder}})} outgoingTrains={state.trains.chosen} saveTrain={saveTrain}/> : null} */}
-				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} searchReturn={searchReturn} /> : null }
-				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} searchReturn={() => console.log("Should not be calling searchreturn from return table")}/> : null }
+				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} /> : null }
+				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} outgoingSelected={state.trains.chosen} searchReturn={() => console.log("Should not be calling searchreturn from return table")}/> : null }
 				{/* need to set search return as optional */}
 			</div>
 		</>

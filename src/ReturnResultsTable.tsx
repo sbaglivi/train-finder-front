@@ -11,7 +11,7 @@ const ReturnResultsTable = ({reorderResults, results, outgoingTrains, saveTrain}
 	}
 
 	useEffect(() => {
-		applySortOrder(sortOrder, results, reorderResults);
+		// applySortOrder(sortOrder, results, reorderResults);
 		console.log(sortOrder);
 	}, [sortOrder])
 
