@@ -340,3 +340,7 @@ thead > tr {
 .prevSearchDiv:hover {
   background-color: #aaaaaa;
 }
+#contextMenu {
+  background-color: black;
+  color: white;
+}

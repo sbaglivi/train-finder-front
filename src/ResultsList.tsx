@@ -7,10 +7,15 @@ import { intervalToDuration } from 'date-fns';
 const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (action: Action) => void, saveTrain: (train: Train, invert: boolean) => void }) => {
 	let [sortOrder, setSortOrder] = useState({by: 'departureTime', asc: 1});
 	let [showMore, setShowMore] = useState('none')
+	let [contextMenuState, setContextMenuState] = useState({position: {x: 0, y: 0}, clickedTrainId: null, visible: false});
 
 	let results = state.trains.outgoing;
 	const post = async (path:string, body:BodyInit, returning:boolean) => {
 		return await postWithoutDispatch(path, body, returning, dispatch);
+	}
+	const logTrain = () => {
+		let clickedTrain = results.find(result => result.id === contextMenuState.clickedTrainId)
+		console.log(clickedTrain)
 	}
 
 	const toggleShowMore = () => {
@@ -25,6 +30,40 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 		applySortOrder(sortOrder, results, reorderResults);
 		console.log(sortOrder)
 	}, [sortOrder]) // is this wrong?
+
+	const handleRightClick = (e:any) => {
+		e.preventDefault()
+		const xPos = e.pageX;
+		const yPos = e.pageY;
+		const parentTr = e.target.closest('tr');
+		let trainId;
+		if (parentTr === null) trainId = null;
+		else trainId = parentTr.dataset.id;
+		setContextMenuState({visible: true, clickedTrainId: trainId, position: {x: xPos, y: yPos}});
+	}
+
+	const hideMenuOnClick = (e:any) => {
+		if (e.target.closest("#contextMenu") === null){
+			setContextMenuState(prevState => ({...prevState, clickedTrainId: null, visible: false}));
+		}
+	}
+
+	useEffect(() => {
+		let trows = document.querySelectorAll("#outgoingTbody > tr");
+		if (trows === null) return;
+		for (let  row of Array.from(trows)){
+			row.addEventListener("contextmenu", handleRightClick)
+		}
+		window.addEventListener("click", hideMenuOnClick);
+		return () => {
+			let trows = document.querySelectorAll("#outgoingTbody > tr");
+			if (trows === null) return;
+			for (let  row of Array.from(trows)){
+				row.removeEventListener("contextmenu", handleRightClick)
+			}
+			window.removeEventListener("click", hideMenuOnClick);
+		}
+	}, [])
 
 	function getMinPriceIfExists(train:Train){
 		if  (typeof train.minPrice === 'number'){
@@ -96,8 +135,7 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 			requestBody = {...requestBodyBase, inputValue: train.inputValue, cookies: italoCookies}
 		try {
 			reqResults = await post('/return', JSON.stringify(requestBody), true)
-			if(!reqResults) return;
-			if (reqResults.results.length){
+			if(!reqResults) return; if (reqResults.results.length){
 				console.log('Results.length > 0, updating prices');
 				let chosen = {...state.trains.chosen,  [train.company]: train}
 				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
@@ -118,8 +156,9 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 			className = state.trains.chosen[result.company]?.id === result.id ? (result.company === 'italo' ? 'italoSelected' : 'trenitaliaSelected') : ''
 		}
 		return (
-			<tr key={result.id} className={className} onDoubleClick={saveTrain.bind(null, result, false)}> {/* Have to pass it explicitly otherwise the event gets passed and since it's an object it's always truthy */}
-			{/* <tr key={result.id} className={className} onDoubleClick={roundtrip ? searchReturn.bind(null, result) : undefined}> */}
+			// <tr key={result.id} className={className} onDoubleClick={saveTrain.bind(null, result, false)}> {/* Have to pass it explicitly otherwise the event gets passed and since it's an object it's always truthy */}
+			// need to somehow pass the train to the event listener, or just the id and then I can find it from state
+			<tr key={result.id} className={className} data-id={result.id} onDoubleClick={roundtrip ? searchReturn.bind(null, result) : undefined} >
 				<td>{result.departureTime}</td>
 				<td>{result.arrivalTime}</td>
 				<td>{result.duration}</td>
@@ -151,10 +190,13 @@ const ResultsList = ({state, dispatch, saveTrain} : {state:State, dispatch: (act
 				<th style={{display: showMore}} onClick={updateSortOrder.bind(null, 'adult', setSortOrder)} >Senior<span onClick={toggleShowMore}>&#8592;</span></th>
 			</tr>
 		</thead>
-			<tbody>
+			<tbody id='outgoingTbody'>
 				{tableRows}
 			</tbody>
 		</table>
+		<div style={{zIndex: 1, display: contextMenuState.visible ? 'block' : 'none', position: 'absolute', top: `${contextMenuState.position.y}px`, left: `${contextMenuState.position.x}px`}} id="contextMenu">
+			<button onClick={logTrain}>Click</button>
+		</div>
 		</div>
 	)
 }

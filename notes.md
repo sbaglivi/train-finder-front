@@ -139,3 +139,11 @@ Voglio che minPrice sia effettivamente il prezzo minimo ma che poi possa non ess
     milano-firenze: Train[],
     roma-bologna: Train[dfsfmactempelapsedsllkh
 }
+
+
+if not returning roundtrip tr needs function to search return resutls
+ifa not returning and train id matches chosen train id then it should get a class 
+
+codice per ricerca risultati del ritorno e aggiornamento prezzi  - fatto?
+manca codice per hint (prezzo ritorno)
+codice per menu tasto destro

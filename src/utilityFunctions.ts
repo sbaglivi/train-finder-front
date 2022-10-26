@@ -3,6 +3,48 @@ import format from 'date-fns/format';
 import {State, Action, Train} from './App';
 import {Dispatch, SetStateAction} from 'react';
 
+export function getMinOutgoingPrice(outgoingTrains: State['trains']['chosen']):number{ 
+	if (outgoingTrains.italo && outgoingTrains.trenitalia) return Math.min(outgoingTrains.italo?.minPrice, outgoingTrains.trenitalia?.minPrice)
+	return (outgoingTrains.italo?.minPrice ?? outgoingTrains.trenitalia!.minPrice) // ! used because I know at least 1 is defined (used to search)
+}
+
+export function addRoundtripPrices(reqResults: { results: Train[]}, returningTrains:Train[], outgoingTrains: State['trains']['chosen'], company: 'italo' | 'trenitalia'){
+	reqResults.results.sort((a,b) => departureTimeSort(a,b,1)); // if I sort one list I should also sort the other, othewise what's the point? also I should remove from the list trains thta have been matched
+	let [sameCompanyReturnTrains, otherCompanyReturnTrains] = partition(returningTrains, train => train.company === company);
+	sameCompanyReturnTrains.sort((a,b) => departureTimeSort(a,b,1));
+	let outgoingTrain:Train = outgoingTrains[company]!; // This should always be defined because it's the train from which search results were generated
+	for (let newTrainData of reqResults.results){
+		let matchingTrain: Train | false = binarySearch(sameCompanyReturnTrains, newTrainData, departureTimeSort);
+		if (!matchingTrain){
+			console.log(newTrainData)
+			newTrainData.minRoundtripPrice = newTrainData.minPrice;
+			newTrainData.totPrice = Math.round((newTrainData.minPrice + outgoingTrain.minPrice)*10)/10;
+			sameCompanyReturnTrains.push(newTrainData) // train found in return trains req was not found in first req for (one way) coming back trains?
+		} else {
+			matchingTrain.minRoundtripPrice = newTrainData.minPrice;
+			if (matchingTrain.minOnewayPrice === undefined) matchingTrain.minOnewayPrice = matchingTrain.minPrice; 
+			matchingTrain.minPrice = Math.min(matchingTrain.minOnewayPrice, matchingTrain.minRoundtripPrice);
+			let minOutgoingPrice = getMinOutgoingPrice(outgoingTrains);
+			if (matchingTrain.minOnewayPrice <= matchingTrain.minRoundtripPrice){ // no AR offers, can also choose outgoing train of other company
+				matchingTrain.totPrice = Math.round((minOutgoingPrice + matchingTrain.minPrice)*10)/10;
+			} else {
+				let minMixedPrice = minOutgoingPrice + matchingTrain.minOnewayPrice;
+				let minRoundtripPrice = outgoingTrain.minPrice + matchingTrain.minRoundtripPrice;
+				matchingTrain.totPrice = Math.min(minMixedPrice, minRoundtripPrice);
+			}
+		}
+	}
+	let newReturningTrains = [...otherCompanyReturnTrains, ...sameCompanyReturnTrains].sort((a,b) => departureTimeSort(a,b,1))
+	return newReturningTrains;
+}
+
+
+export function partition<Type>(array:Type[], isValid:(elem: Type) => boolean):[Type[], Type[]] {
+	return array.reduce(([pass, fail], elem) => {
+	  return isValid(elem) ? [[...pass, elem], fail] : [pass, [...fail, elem]];
+	}, [[], []] as [Type[], Type[]]);
+  }
+
 export const updateSortOrder = (key: keyof Train, setSortOrder:Function) => {
 	setSortOrder((oldOrder:{by: string, asc:number}) => {
 		if (oldOrder.by === key){
@@ -13,10 +55,10 @@ export const updateSortOrder = (key: keyof Train, setSortOrder:Function) => {
 	})
 }
 
-export const applySortOrder = (sortOrder : {by: string, asc: number}, results: Train[], reorderResults:Function) => {
+export const applySortOrder = (sortOrder : {by: string, asc: number}, trains: Train[]) => {
 	const {asc, by} = sortOrder;
 	let newOrder;
-	newOrder = results;
+	newOrder = trains;
 	switch(by){
 		case 'departureTime':
 			newOrder.sort((a,b) => departureTimeSort(a,b,asc));
@@ -35,9 +77,10 @@ export const applySortOrder = (sortOrder : {by: string, asc: number}, results: T
 			newOrder.sort((a,b) => durationSort(a,b,asc));
 			break;
 		default:
-			return;
+			throw new Error(`applySortOrder was called with a key that it's not supposed to handle: ${by}`);
 	}
-	reorderResults(newOrder);
+	return newOrder;
+	// reorderResults(newOrder);
 }
 
 export function binarySearch<Type> (array: Type[], element: Type, compareFn: (a: Type, b: Type, asc: number) => number, asc: number = 1) : Type | false {

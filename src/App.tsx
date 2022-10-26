@@ -5,6 +5,7 @@ import ReturnResultsTable from './ReturnResultsTable';
 import {useReducer} from 'react';
 import {BallTriangle} from 'react-loader-spinner';
 import PreviousSearches from './PreviousSearches';
+import { applySortOrder } from './utilityFunctions';
 
 export type Action = {
 	type: 'onewaySearch',
@@ -23,7 +24,7 @@ export type Action = {
 	payload: {error: string}
 } | {
 	type:'reorderResults',
-	payload: {direction: 'outgoing' | 'returning', newOrder: Train[]}
+	payload: {direction: 'outgoing' | 'returning', sortOrder: {by: keyof Train, asc: number}}
 } | { 
 	type: 'toggleLoading'
 } | {
@@ -39,9 +40,7 @@ export type Action = {
 	payload: {search: PreviousSearch}
 } | {
 	type: 'deleteSearch',
-	payload: {search: PreviousSearch}
-}
-
+	payload: {search: PreviousSearch} }
 
 function reducer(state:State, action: Action){
 	switch(action.type){
@@ -103,8 +102,9 @@ function reducer(state:State, action: Action){
 
 		case 'reorderResults':
 			{
-			const {direction, newOrder} = action.payload;
-				const newState = {...state, trains: {...state.trains, [direction]: newOrder}, loading: false};
+			const {direction, sortOrder} = action.payload;
+			const newOrder = applySortOrder(sortOrder, state.trains[direction])
+			const newState = {...state, trains: {...state.trains, [direction]: newOrder}, loading: false};
 			return newState;
 			}
 
