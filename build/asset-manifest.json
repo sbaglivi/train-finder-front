@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/static/css/main.31b87d79.css",
-    "main.js": "/static/js/main.fdcbbef2.js",
+    "main.js": "/static/js/main.5ea6de67.js",
     "static/js/787.bc9c665b.chunk.js": "/static/js/787.bc9c665b.chunk.js",
     "static/media/OpenSans-Regular.ttf": "/static/media/OpenSans-Regular.77c09223204154ae8d43.ttf",
     "index.html": "/index.html",
     "main.31b87d79.css.map": "/static/css/main.31b87d79.css.map",
-    "main.fdcbbef2.js.map": "/static/js/main.fdcbbef2.js.map",
+    "main.5ea6de67.js.map": "/static/js/main.5ea6de67.js.map",
     "787.bc9c665b.chunk.js.map": "/static/js/787.bc9c665b.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.31b87d79.css",
-    "static/js/main.fdcbbef2.js"
+    "static/js/main.5ea6de67.js"
   ]
 }
