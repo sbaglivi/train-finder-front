@@ -148,6 +148,11 @@ export const validateData = (data:{dateTime:string, returnDateTime:string, origi
 		console.log(data.destination+' is not a valid station name')
 		return false
 	}
+	const passengersAcceptedPatterns = [/^[0-9][1-9][0-9]$/, /^[1-9][0-9]{2}$/, /^[0-9]{2}[1-9]$/];
+	if(passengersAcceptedPatterns.every(pattern => data.passengers.match(pattern) === null)){
+		console.log("Passengers data is not valid")
+		return false
+	}
 	return true
 }
 

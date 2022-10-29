@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import React, {useState} from 'react';
 import Fuse from 'fuse.js';
 import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post as postWithoutDispatch, departureTimeSort} from './utilityFunctions';
 import {State, Action, Train} from './App'
@@ -16,7 +16,7 @@ const SearchForm = ({previousFormData, dispatch}:{previousFormData: State['prevQ
 	const post = async (path:string, body:BodyInit, returning:boolean = false) => {
 		return await postWithoutDispatch(path,body,returning, dispatch);
 	}
-	const updateFormData = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const updateFormData = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
 		const name = e.target.name
 		setFormData(formData => ({...formData, [name]: e.target.value}))
 	}
@@ -135,15 +135,12 @@ const SearchForm = ({previousFormData, dispatch}:{previousFormData: State['prevQ
 			  <input id='returnDateTimeInput' type='text' autoComplete='off' placeholder='dd/mm hh' name='returnDateTime' value={formData.returnDateTime} onBlur={e => validateDateTime(e.target.value, setFormData, formData.dateTime)} onChange={updateFormData} />
 		  </div>
 		  <div className='passengersDiv col-5'>
-			  <input id='passengersInput' autoComplete='off' type='text' pattern="[1-9][0-9]{2}|[0-9][1-9][0-9]|[0-9]{2}[1-9]" minLength={3} maxLength={3} placeholder='ASY' name='passengers' 
-				  title="3 numbers from 0 to 9 that describe respectively the number of adult, senior and young passengers. (At least one needs to be different from 0)" onChange={updateFormData} 
-				  value={formData.passengers} className='passengersInput'
-			  />
-			  <label htmlFor='passengersInput' className='passengersLabel'>
-				  Adulti
-				  Senior
-				  Giovani
-			  </label>
+			<textarea cols={1} rows={3} maxLength={3} minLength={3} 
+			title={"3 numbers from 0 to 9 that describe respectively the number of adult, senior and young passengers. (At least one needs to be different from 0)"} 
+			id="passengersInput" name="passengers" value={formData.passengers} onChange={updateFormData} onFocus={(e) => e.target.select()}
+			required
+			></textarea>
+			  <label htmlFor='passengersInput' className='passengersLabel'>Adulti Senior Giovani</label>
 		  </div>
 		  <button className='formSearchButton'>Search</button>
 	  </form>
