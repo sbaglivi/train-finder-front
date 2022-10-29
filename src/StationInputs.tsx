@@ -2,8 +2,8 @@ import Fuse from 'fuse.js';
 import React, { useState } from 'react';
 import { State } from "./App";
 import InputColumn from './InputColumn';
+import { acceptedStations } from './utilityFunctions';
 
-const acceptedStations = ['Milano Centrale', 'Milano Garibaldi', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
 const fuse = new Fuse(acceptedStations, { includeScore: true });
 
 const StationInput = ({ setFormData, origin, destination, originValid, destinationValid }: { setFormData: React.Dispatch<React.SetStateAction<State["prevQuery"]["formData"]>>, origin: string, destination: string, originValid: boolean, destinationValid: boolean }) => {
