@@ -1,150 +1,90 @@
-import React, {useState} from 'react';
-import Fuse from 'fuse.js';
-import {validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post as postWithoutDispatch, departureTimeSort} from './utilityFunctions';
-import {State, Action, Train} from './App'
+import React, { useState } from 'react';
+import { validateData, validateDateTime, getDifferentFields, stationNameToCamelcase, post as postWithoutDispatch, departureTimeSort } from './utilityFunctions';
+import { State, Action, Train } from './App'
+import InputColumn from "./InputColumn";
+import StationInputs from "./StationInputs";
+import DateTimeInput from './DateTimeInput';
 
+const acceptedStations = ['Milano Centrale', 'Milano Garibaldi', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
 
-const SearchForm = ({previousFormData, dispatch}:{previousFormData: State['prevQuery']['formData'], dispatch: (action: Action) => void}) => {
-	const [formData, setFormData] = useState({origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100'});
-	const [searchResults, setSearchResults] = useState<string[]>([]);
-	const [ulOffset, setUlOffset] = useState({left: 0, top: 0});
+const SearchForm = ({ previousFormData, dispatch }: { previousFormData: State['prevQuery']['formData'], dispatch: (action: Action) => void }) => {
+	const [formData, setFormData] = useState({ origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100' });
+	const [validFields, setValidFields] = useState({ origin: true, destination: true, dateTime: true, returnDateTime: true, passengers: true });
 
-	const acceptedStations = ['Milano Centrale', 'Milano Garibaldi', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
-	const fuse = new Fuse(acceptedStations, {includeScore: true});
-	let ulDisplay = searchResults.length > 0 ? 'block' : 'none';
-
-	const post = async (path:string, body:BodyInit, returning:boolean = false) => {
-		return await postWithoutDispatch(path,body,returning, dispatch);
+	const post = async (path: string, body: BodyInit, returning: boolean = false) => {
+		return await postWithoutDispatch(path, body, returning, dispatch);
 	}
+
 	const updateFormData = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
 		const name = e.target.name
-		setFormData(formData => ({...formData, [name]: e.target.value}))
+		setFormData(formData => ({ ...formData, [name]: e.target.value }))
 	}
 
-	const updateValueAndSearchResults = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setFormData(formData => ({...formData, [e.target.name]: e.target.value}));
-		setSearchResults(fuse.search(e.target.value).map(result => result.item))
-	}
-
-	const acceptSearchResult = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter' || e.key === 'Tab'){
-			if (searchResults.length > 0){
-				if (e.key === 'Enter') e.preventDefault();
-				let target = e.target as HTMLInputElement;
-				setFormData(formData => ({...formData, [target.name]: searchResults[0]}))
-				setSearchResults([]);
-			}
-		}
-	}
-	const acceptSearchResultOnClick = (value:string) => {
-		let activeElement = document.activeElement 
-		if (activeElement instanceof HTMLInputElement){
-			let field = activeElement.name;
-			setFormData(old => ({...old, [field]: value}));
-			setSearchResults([]);
-			if (activeElement.name === 'origin'){
-				let destinationInput = document.getElementById('destinationInput')
-				if(destinationInput) destinationInput.focus()
-			} else {
-				let dateTimeInput = document.getElementById('dateTimeInput')
-				if (dateTimeInput) dateTimeInput.focus()
-			}
-		}
-	}
-
-	const showSearchResults = (e: React.ChangeEvent<HTMLInputElement>) => {
-
-		const name:string = (e.target as HTMLInputElement).name
-		if (!Object.keys(formData).includes(name)) return
-		setSearchResults(fuse.search(formData[(name as keyof typeof formData)]).map(result => result.item))
-		// const leftOffset = e.target.getBoundingClientRect().left;
-		// const topOffset = e.target.getBoundingClientRect().bottom;
-		const leftOffset = e.target.offsetLeft
-		const topOffset = e.target.offsetTop + e.target.offsetHeight;
-		setUlOffset({left: leftOffset, top: topOffset});
-
-	}
-	const getResults = async (e:React.FormEvent<HTMLFormElement>) => {
+	const getResults = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-        if(!validateData(formData, setFormData, acceptedStations)){
+		if (!validateData(formData, setFormData, acceptedStations, setValidFields)) {
 			return;
 		}
 
 		let oneWay = !formData.returnDateTime;
-		let differentFields:string[] | [] = getDifferentFields(previousFormData, formData)
+		let differentFields: string[] | [] = getDifferentFields(previousFormData, formData)
 		if (differentFields.length === 0)
 			return;
-		let currentTimestamp = Date.now() 
-		let query = {formData, time: currentTimestamp}
+		let currentTimestamp = Date.now()
+		let query = { formData, time: currentTimestamp }
 		let origin = stationNameToCamelcase(formData.origin)
 		let destination = stationNameToCamelcase(formData.destination)
 		let results
 
-		if (oneWay){
+		if (oneWay) {
 			console.log('making search')
-			let reqBody = {...formData, origin, destination}
-            results = await post('/outgoingOnly', JSON.stringify(reqBody)) // File to run is the simple one that just return lines
-			if(!results) return;
-			results.results.sort((a:Train, b:Train) => departureTimeSort(a,b,1));
-			dispatch({type: 'onewaySearch', payload: {query, outgoing: results.results, error: results.error}})
+			let reqBody = { ...formData, origin, destination }
+			results = await post('/outgoingOnly', JSON.stringify(reqBody)) // File to run is the simple one that just return lines
+			if (!results) return;
+			results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+			dispatch({ type: 'onewaySearch', payload: { query, outgoing: results.results, error: results.error } })
 
-			// fields that can change: origin / dest / datetime / returndate / pass
-			// origin / dest / datetime / pass new search for out and back without offers, when outgoign gets selected search offers
-			// return -> if outgoing already selected new double search: return dependent and independent.
-			//        -> if not selected only independent return search
 		} else {
-			if (differentFields.length === 1 &&  differentFields[0] === 'returnDateTime'){
+			if (differentFields.length === 1 && differentFields[0] === 'returnDateTime') {
 				// should check if already chosen selected
-				let body = {...formData, origin: destination, destination: origin} // swapped them because I'm looking for return trips, no?
+				let body = { ...formData, origin: destination, destination: origin } // swapped them because I'm looking for return trips, no?
 				results = await post('/outgoingOnly', JSON.stringify(body), true) // simple script no metadata since only return search
-				if(!results) return;
-				results.results.sort((a:Train,b:Train) => departureTimeSort(a,b,1));
-				dispatch({type: 'returnTimeUpdate', payload: {query, error: results.error, returning: results.results}});
+				if (!results) return;
+				results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+				dispatch({ type: 'returnTimeUpdate', payload: { query, error: results.error, returning: results.results } });
 			} else {
-				let body = {...formData, origin, destination}
+				let body = { ...formData, origin, destination }
 				results = await post('/allNoOffers', JSON.stringify(body)) // this needs to return metadata
-				if(!results) return;
-				results.results.outgoing.sort((a:Train,b:Train) => departureTimeSort(a,b,1));
-				results.results.returning.sort((a:Train,b:Train) => departureTimeSort(a,b,1));
-				dispatch({type: 'roundtripSearch', payload: {query, error: results.error, outgoing: results.results.outgoing, returning: results.results.returning, metadata: results.metadata}})
+				if (!results) return;
+				results.results.outgoing.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+				results.results.returning.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+				dispatch({ type: 'roundtripSearch', payload: { query, error: results.error, outgoing: results.results.outgoing, returning: results.results.returning, metadata: results.metadata } })
 			}
 		}
 	}
 
-  return (
-	  <form onSubmit={getResults}>
-		  <ul  style={{display: ulDisplay, left: `${ulOffset.left}px`, top: `${ulOffset.top}px`}}> 
-			  {searchResults.map((result,index) => 
-			  <li key={index} onClick={acceptSearchResultOnClick.bind(null,result)} onMouseDown={(e) => e.preventDefault()}>{result}</li>
-			  )}
-		  </ul>
-		  <div className='column col-1'  >
-		  <label htmlFor='originInput'>Partenza:</label>
-			  <input id='originInput' autoComplete='off' type='text' placeholder='Milano' name='origin' value={formData.origin} onChange={updateValueAndSearchResults} onKeyDown={acceptSearchResult} onBlur={() =>  setSearchResults([])} onFocus={showSearchResults} />
-		  </div>
-		  <div className='column col-2'>
-			  <label htmlFor='destinationInput'>Destinazione:</label>
-			  <input id='destinationInput' autoComplete='off' type='text' placeholder='Roma' name='destination' value={formData.destination} onChange={updateValueAndSearchResults} onBlur={() => setSearchResults([])} onKeyDown={acceptSearchResult} onFocus={showSearchResults}/>
-			</div>
-		  <div className='column col-3'>
-			  <label htmlFor='dateTimeInput'>Data/ora partenza:</label>
-			  <input id='dateTimeInput' type='text' autoComplete='off' placeholder='dd/mm hh' name='dateTime' value={formData.dateTime} onBlur={e => validateDateTime(e.target.value, setFormData)} onChange={updateFormData} />
-		  </div>
-		  <div className='column col-4'>
-			  <label htmlFor='returnDateTimeInput'>Ritorno: (opzionale)</label>
-			  <input id='returnDateTimeInput' type='text' autoComplete='off' placeholder='dd/mm hh' name='returnDateTime' value={formData.returnDateTime} onBlur={e => validateDateTime(e.target.value, setFormData, formData.dateTime)} onChange={updateFormData} />
-		  </div>
-		  <div className='passengersDiv col-5'>
-			<textarea cols={1} rows={3} maxLength={3} minLength={3} 
-			title={"3 numbers from 0 to 9 that describe respectively the number of adult, senior and young passengers. (At least one needs to be different from 0)"} 
-			id="passengersInput" name="passengers" value={formData.passengers} onChange={updateFormData} onFocus={(e) => e.target.select()}
-			required
-			></textarea>
-			  <label htmlFor='passengersInput' className='passengersLabel'>Adulti Senior Giovani</label>
-		  </div>
-		  <button className='formSearchButton'>Search</button>
-	  </form>
-  );
+	return (
+		<form onSubmit={getResults}>
+			<StationInputs setFormData={setFormData} origin={formData.origin} originValid={validFields.origin} destinationValid={validFields.destination} destination={formData.destination} />
+			<InputColumn label="Data/ora partenza:" valid={validFields.dateTime} inputName="dateTime" index={3}>
+				<DateTimeInput name="dateTime" value={formData.dateTime} setFormData={setFormData} />
+			</InputColumn>
+			<InputColumn label="Ritorno (opzionale):" valid={validFields.returnDateTime} inputName="returnDateTime" index={4}>
+				<DateTimeInput name="returnDateTime" value={formData.returnDateTime} setFormData={setFormData} goingoutDateTime={formData.dateTime} />
+			</InputColumn>
+			<InputColumn valid={validFields.passengers} inputName="passengers" index={5}>
+				<div className='passengersDiv'>
+					<textarea cols={1} rows={3} maxLength={3} minLength={3} className={validFields.passengers ? "" : "invalid"}
+						title={"3 numbers from 0 to 9 that describe respectively the number of adult, senior and young passengers. (At least one needs to be different from 0)"}
+						id="passengersInput" name="passengers" value={formData.passengers} onChange={updateFormData} onFocus={(e) => e.target.select()}
+						required
+					></textarea>
+					<label htmlFor='passengersInput' className='passengersLabel'>Adulti Senior Giovani</label>
+				</div>
+			</InputColumn>
+			<button className='formSearchButton'>Search</button>
+		</form>
+	);
 }
 
 export default SearchForm;

@@ -84,6 +84,10 @@ td {
   width: 100px;
 }
 
+.invalid {
+  border-color: red !important;
+}
+
 .container {
   display: flex;
   align-items: flex-start;

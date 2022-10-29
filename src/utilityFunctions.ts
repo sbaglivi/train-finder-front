@@ -135,25 +135,39 @@ export const durationSort = (a:Train, b:Train, asc: number) => {
 	return asc * (durationTimeA > durationTimeB ? 1 : -1);
 }
 
-export const validateData = (data:{dateTime:string, returnDateTime:string, origin: string, destination: string, passengers: string}, setFormData: Dispatch<SetStateAction<State['prevQuery']['formData']>>, acceptedStations:string[]) => {
-	if (!validateDateTime(data.dateTime, setFormData))
-		return false
-	if (data.returnDateTime && !validateDateTime(data.returnDateTime, setFormData, data.dateTime))
-		return false
+type validFormFields = {
+	[key in keyof State['prevQuery']["formData"]]: boolean;
+}
+
+export const validateData = (data:{dateTime:string, returnDateTime:string, origin: string, destination: string, passengers: string}, setFormData: Dispatch<SetStateAction<State['prevQuery']['formData']>>, acceptedStations:string[], setValidFields: (fields: validFormFields) => void) => {
+	let dataValid = true;
+	let validFields = {origin: true, destination: true, dateTime: true, returnDateTime: true, passengers: true};
+	if (!validateDateTime(data.dateTime, setFormData)){
+		dataValid = false;
+		validFields.dateTime = false;
+	}
+	if (data.returnDateTime && !validateDateTime(data.returnDateTime, setFormData, data.dateTime)){
+		dataValid = false;
+		validFields.returnDateTime = false;
+	}
 	if (!acceptedStations.includes(data.origin)){
 		console.log(data.origin+' is not a valid station name')
-		return false
+		dataValid = false;
+		validFields.origin = false;
 	}
 	if (!acceptedStations.includes(data.destination)){
 		console.log(data.destination+' is not a valid station name')
-		return false
+		dataValid = false;
+		validFields.destination = false;
 	}
 	const passengersAcceptedPatterns = [/^[0-9][1-9][0-9]$/, /^[1-9][0-9]{2}$/, /^[0-9]{2}[1-9]$/];
 	if(passengersAcceptedPatterns.every(pattern => data.passengers.match(pattern) === null)){
 		console.log("Passengers data is not valid")
-		return false
+		dataValid = false;
+		validFields.passengers = false;
 	}
-	return true
+	setValidFields(validFields);
+	return dataValid;
 }
 
 // This needs string to parse, fieldname to understand if it's a return date or going out, the going out date if it's parsing a return date, wants setformdata to set the format to the correct one
