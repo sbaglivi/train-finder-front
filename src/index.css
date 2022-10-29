@@ -70,6 +70,7 @@ td {
   display: block; */
   word-wrap: break-word;
   word-spacing: 100vw;
+  overflow: hidden;
   display: block;
 }
 .passengersDiv {
