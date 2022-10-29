@@ -5,7 +5,6 @@ import { Dispatch, SetStateAction } from 'react';
 
 export const shortenedStationNames = {
 	'Milano Centrale': 'Milano C.',
-	'Milano Garibaldi': 'Milano G.',
 	'Reggio Emilia': 'Reggio E.',
 	'Bologna': 'Bologna',
 	'Firenze': "Firenze",
@@ -17,7 +16,7 @@ export const shortenedStationNames = {
 	'Vallo della Lucania': "Vallo"
 };
 
-export const acceptedStations = ['Milano Centrale', 'Milano Garibaldi', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
+export const acceptedStations = ['Milano Centrale', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
 export const getResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
 	let oneWay = !formData.returnDateTime;
 	let differentFields: string[] | [] = getDifferentFields(prevFormData, formData)
