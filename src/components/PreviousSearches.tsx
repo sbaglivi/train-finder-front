@@ -1,6 +1,6 @@
-import { PreviousSearch } from './App';
+import { PreviousSearch } from '../types';
 import { AiOutlineCloseCircle } from 'react-icons/ai';
-import { shortenedStationNames } from './utilityFunctions';
+import { shortenedStationNames } from '../utilityFunctions';
 const PreviousSearches = ({ previousSearches, loadSearch, deleteSearch }: { previousSearches: PreviousSearch[], loadSearch: (search: PreviousSearch) => void, deleteSearch: (search: PreviousSearch) => void }) => {
     return (
         <div className='prevSearchesDiv'>

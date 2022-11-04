@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { validateData, acceptedStations } from './utilityFunctions';
-import { State } from './App'
+import { validateData, acceptedStations } from '../utilityFunctions';
+import { State } from '../types'
 import InputColumn from "./InputColumn";
 import StationInputs from "./StationInputs";
 import DateTimeInput from './DateTimeInput';

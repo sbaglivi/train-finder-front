@@ -1,47 +1,12 @@
-import SearchForm from './SearchForm';
-import SavedList from './SavedList';
-import Table from './Table';
+import SearchForm from './components/SearchForm';
+import SavedList from './components/SavedList';
+import Table from './components/Table';
 import { useReducer } from 'react';
 import { BallTriangle } from 'react-loader-spinner';
-import PreviousSearches from './PreviousSearches';
+import PreviousSearches from './components/PreviousSearches';
 import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getResults } from './utilityFunctions';
 import { MdOutlineTrain } from 'react-icons/md'
-
-export type Action = {
-	type: 'onewaySearch',
-	payload: { query: State['prevQuery'], outgoing: Train[], error: string }
-} | {
-	type: 'roundtripSearch',
-	payload: { query: State['prevQuery'], outgoing: Train[], returning: Train[], metadata: State['metadata'], error: string }
-} | {
-	type: 'returnTimeUpdate',
-	payload: { query: State['prevQuery'], returning: Train[], error: string }
-} | {
-	type: 'selectOutgoingTrip',
-	payload: { returning: Train[], chosen: State['trains']['chosen'], error: string }
-} | {
-	type: 'setError',
-	payload: { error: string }
-} | {
-	type: 'reorderResults',
-	payload: { direction: 'outgoing' | 'returning', sortOrder: { by: keyof Train, asc: number } }
-} | {
-	type: 'toggleLoading'
-} | {
-	type: 'toggleLoadingAndReset'
-} | {
-	type: 'requestFail',
-	payload: { error: string, reqType: 'outgoing' | 'returning' }
-} | {
-	type: 'setSaved',
-	payload: { newSaved: State['trains']['saved'] }
-} | {
-	type: 'loadSearch',
-	payload: { search: PreviousSearch }
-} | {
-	type: 'deleteSearch',
-	payload: { search: PreviousSearch }
-}
+import { Action, PreviousSearch, State, Train } from './types';
 
 function reducer(state: State, action: Action) {
 	switch (action.type) {
@@ -151,60 +116,6 @@ function reducer(state: State, action: Action) {
 }
 
 
-export type Train = {
-	id: string,
-	departureTime: string,
-	arrivalTime: string,
-	duration: string,
-	company: 'italo' | 'trenitalia',
-	inputValue: string | undefined,
-	young: string | undefined,
-	senior: string | undefined,
-	adult: string | undefined,
-	minPrice: number, // one way, but need to change the name on back end to be able toc change this one
-	minOnewayPrice: number | undefined,
-	minRoundtripPrice: number | undefined,
-	minIndividualPrice: number,
-	totPrice: number
-}
-
-export type TrainWD = Train & {
-	returning: boolean,
-	date: string,
-	passengers: string
-}
-
-export type FormData = {
-	origin: string, destination: string, dateTime: string, returnDateTime: string, passengers: string
-}
-
-export type PreviousSearch = {
-	formData: FormData,
-	results: {
-		outgoing: Train[],
-		returning: Train[]
-	}
-}
-
-export type State = {
-	prevQuery: {
-		formData: FormData,
-		time: number
-	},
-	trains: {
-		outgoing: Train[],
-		returning: Train[],
-		chosen: { italo: Train | undefined, trenitalia: Train | undefined },
-		saved: {
-			[index: string]: TrainWD[]
-		}
-	},
-	metadata: { italo: { cookies: Object }, trenitalia: { cartId: string, cookies: Object } },
-	error: string,
-	loading: boolean,
-	previousSearches: PreviousSearch[]
-}
-
 
 const initialState: State = {
 	prevQuery: { formData: { origin: '', destination: '', dateTime: '', returnDateTime: '', passengers: '100' }, time: 0 },
@@ -242,7 +153,6 @@ function stateInit(initialState: State) {
 	return initialState;
 }
 
-// random comment
 const App = () => {
 	const [state, dispatch] = useReducer(reducer, initialState, stateInit);
 
@@ -279,8 +189,6 @@ const App = () => {
 		return;
 	}
 	function saveTrain(train: Train, returning: boolean) { // SE RETURNING E" VERO MA L'HASH E' L'OPPOSTO, DEVO NEGARE RETURNING? ??? ?? ??
-		// mi servono anche data e passeggeri
-		console.log(returning);
 		let { origin, destination, passengers } = state.prevQuery.formData;
 		let date = returning ? state.prevQuery.formData.returnDateTime : state.prevQuery.formData.dateTime;
 		date = date.slice(0, 5);
@@ -359,11 +267,8 @@ const App = () => {
 			{state.loading ? <BallTriangle height={100} width={100} color='black' radius={5} wrapperClass='loadingAnimation' /> : null}
 			{state.error ? <p style={{ color: 'darkred' }}>{state.error}</p> : null}
 			<div className='container' >
-				{/* {state.trains.outgoing.length ? <ResultsList state={state} dispatch={dispatch} saveTrain={saveTrain} /> : null}
-				{state.trains.returning.length ? <ReturnResultsTable results={state.trains.returning} reorderResults={(newOrder: Train[]):void => dispatch({type: 'reorderResults', payload: {direction: 'returning', newOrder}})} outgoingTrains={state.trains.chosen} saveTrain={saveTrain}/> : null} */}
 				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} returnResults={state.trains.returning.length > 0} /> : null}
 				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} /> : null}
-				{/* need to set search return as optional */}
 			</div>
 		</>
 	)

@@ -1,8 +1,8 @@
 import Fuse from 'fuse.js';
 import React, { useState } from 'react';
-import { State } from "./App";
+import { State } from "../types";
 import InputColumn from './InputColumn';
-import { acceptedStations } from './utilityFunctions';
+import { acceptedStations } from '../utilityFunctions';
 
 const fuse = new Fuse(acceptedStations, { includeScore: true });
 

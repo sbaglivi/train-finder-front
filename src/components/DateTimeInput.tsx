@@ -1,6 +1,6 @@
 import React from "react";
-import { validateDateTime } from "./utilityFunctions";
-import { State } from "./App";
+import { validateDateTime } from "../utilityFunctions";
+import { State } from "../types";
 
 const DateTimeInput = ({ name, value, setFormData, goingoutDateTime = '' }: { name: string, value: string, setFormData: React.Dispatch<React.SetStateAction<State["prevQuery"]["formData"]>>, goingoutDateTime?: string }) => {
     return (

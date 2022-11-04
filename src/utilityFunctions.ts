@@ -1,6 +1,6 @@
 import parse from 'date-fns/parse';
 import format from 'date-fns/format';
-import { State, Action, Train } from './App';
+import { State, Action, Train } from './types';
 import { Dispatch, SetStateAction } from 'react';
 
 export const shortenedStationNames = {
