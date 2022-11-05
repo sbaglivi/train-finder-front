@@ -4,7 +4,7 @@ import Table from './components/Table';
 import { useReducer } from 'react';
 import { BallTriangle } from 'react-loader-spinner';
 import PreviousSearches from './components/PreviousSearches';
-import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getDifferentFields, getDispatchBody } from './utilityFunctions';
+import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getDifferentFields, getDispatchBody, getRoundtripDiscounts } from './utilityFunctions';
 import { MdOutlineTrain } from 'react-icons/md'
 import { Action, PreviousSearch, State, Train } from './types';
 
@@ -30,7 +30,6 @@ function reducer(state: State, action: Action) {
 				// reset chosen
 				const { query, outgoing, returning, metadata, error } = action.payload;
 				let { previousSearches } = state;
-				console.log(previousSearches);
 				previousSearches = previousSearches.slice(-4);
 				previousSearches.push({ formData: query.formData, results: { outgoing, returning } });
 				const newState = { prevQuery: query, trains: { ...initialState.trains, saved: state.trains.saved, outgoing, returning }, metadata, error, loading: false, previousSearches }
@@ -228,25 +227,28 @@ const App = () => {
 			console.log('The train you clicked on is already the one selected')
 			return;
 		}
-		const { prevQuery: { formData: { origin, destination, dateTime, returnDateTime, passengers }, time }, metadata: { italo: { cookies: italoCookies }, trenitalia: { cookies: trenitaliaCookies, cartId } } } = state;
-		if ((Date.now() - time) / 1000 > 300) {
+		if ((Date.now() - state.prevQuery.time) / 1000 > 300) {
 			console.log('More than 5 minutes passed since original request, might be too much!')
 			return;
 		}
-		let requestBodyBase = { origin: stationNameToCamelcase(origin), destination: stationNameToCamelcase(destination), dateTime, returnDateTime, passengers, company: train.company }
-		let requestBody = (train.company === 'trenitalia') ? { ...requestBodyBase, goingoutId: train.id, cartId, cookies: trenitaliaCookies } : { ...requestBodyBase, inputValue: train.inputValue, cookies: italoCookies };
+
+		dispatch({ type: 'toggleLoading' });
 		try {
-			let reqResults = await post('/return', JSON.stringify(requestBody), true, dispatch)
-			if (reqResults?.results?.length) {
-				console.log('Results.length > 0, updating prices');
-				let chosen = { ...state.trains.chosen, [train.company]: train }
-				let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
-				dispatch({ type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } })
-			} else
-				console.log('Results.length <= 0, setting Error to ' + reqResults.error);
-			dispatch({ type: 'setError', payload: { error: reqResults.error } });
+			let reqResults = await getRoundtripDiscounts(state.prevQuery.formData, state.metadata, train);
+			if (!reqResults?.results?.length) throw Error(`Results.length <= 0: ${reqResults.error}`);
+			console.log('Return results.length > 0, updating prices');
+			let chosen = { ...state.trains.chosen, [train.company]: train }
+			let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
+			dispatch({ type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } });
 		} catch (e) {
-			console.log('request for ' + train.company + ' returns failed')
+			let errorMessage;
+			if (e instanceof Error)
+				errorMessage = e.message
+			else if (typeof e === 'string')
+				errorMessage = e
+			else errorMessage = 'Received an error that was neither Error type nor string';
+			console.log('request for ' + train.company + ' returns failed' + errorMessage);
+			dispatch({ type: 'setError', payload: { error: errorMessage } });
 		}
 	}
 
@@ -274,7 +276,7 @@ const App = () => {
 			{state.loading ? <BallTriangle height={100} width={100} color='black' radius={5} wrapperClass='loadingAnimation' /> : null}
 			{state.error ? <p style={{ color: 'darkred' }}>{state.error}</p> : null}
 			<div className='container' >
-				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} returnResults={state.trains.returning.length > 0} /> : null}
+				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} returnResults={state.trains.returning.length > 0} isRoundtrip={state.prevQuery.formData.returnDateTime !== ""} /> : null}
 				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} /> : null}
 			</div>
 		</>

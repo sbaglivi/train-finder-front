@@ -123,6 +123,41 @@ export const getDispatchBody = async (formData: State["prevQuery"]["formData"], 
 		return { type: 'requestFail', payload: { reqType: returnOnly ? 'returning' : 'outgoing', error: errorMessage } };
 	}
 }
+export const getRoundtripDiscounts = async (formData: State['prevQuery']['formData'], metadata: State['metadata'], goingoutTrain: Train) => {
+	let requestBodyBase = { ...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination), company: goingoutTrain.company };
+	let requestBody;
+	const { italo: { cookies: italoCookies }, trenitalia: { cookies: trenitaliaCookies, cartId } } = metadata;
+	if (goingoutTrain.company === 'trenitalia') {
+		requestBody = { ...requestBodyBase, goingoutId: goingoutTrain.id, cartId, cookies: trenitaliaCookies };
+	} else {
+		requestBody = { ...requestBodyBase, inputValue: goingoutTrain.inputValue, cookies: italoCookies };
+	}
+	let reqResults = await postRequest('/return', JSON.stringify(requestBody));
+	return reqResults;
+}
+
+export const searchReturn = async (train: Train, metadata: State['metadata'], formData: State['prevQuery']['formData'], state: State) => {
+	try {
+		// let reqResults = await post('/return', JSON.stringify(requestBody), true, dispatch)
+		let reqResults = await getRoundtripDiscounts(formData, metadata, train);
+		if (!reqResults?.results?.length) throw Error(`Results.length <= 0: ${reqResults.error}`);
+		console.log('Return results.length > 0, updating prices');
+		let chosen = { ...state.trains.chosen, [train.company]: train }
+		let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
+		// dispatch({ type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } })
+		return { type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } };
+	} catch (e) {
+		let errorMessage;
+		if (e instanceof Error)
+			errorMessage = e.message
+		else if (typeof e === 'string')
+			errorMessage = e
+		else errorMessage = 'Received an error that was neither Error type nor string';
+		console.log('request for ' + train.company + ' returns failed' + errorMessage);
+		return { type: 'setError', payload: { error: errorMessage } };
+	}
+}
+
 
 export const oldGetResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
 	let oneWay = !formData.returnDateTime;

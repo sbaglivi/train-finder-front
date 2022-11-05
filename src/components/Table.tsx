@@ -21,7 +21,7 @@ let developmentFields: Field[] = [
     { key: "young", displayedName: "Giovane(T)" },
 ]
 
-const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, returnResults = true }: { trains: Train[], isReturning: boolean, dispatch: (action: Action) => void, searchReturn?: (train: Train) => void, outgoingSelected?: State['trains']['chosen'], returnResults?: boolean }) => {
+const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, returnResults = true, isRoundtrip = false }: { trains: Train[], isReturning: boolean, dispatch: (action: Action) => void, searchReturn?: (train: Train) => void, outgoingSelected?: State['trains']['chosen'], returnResults?: boolean, isRoundtrip?: boolean }) => {
     const isDev = true;
 
     const logTrain = () => {
@@ -32,7 +32,6 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
     let [sortOrder, setSortOrder] = useState({ by: 'departureTime' as keyof Train, asc: 1 });
     let [contextMenuState, setContextMenuState] = useState({ position: { x: 0, y: 0 }, clickedTrainId: null, visible: false });
     let showMore = 'none';
-    let isRoundtrip = false;                                           // FIX THESE 
     let hintNeeded = false;
 
     const handleRightClick = (e: any) => {
