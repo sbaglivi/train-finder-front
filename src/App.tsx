@@ -4,7 +4,7 @@ import Table from './components/Table';
 import { useReducer } from 'react';
 import { BallTriangle } from 'react-loader-spinner';
 import PreviousSearches from './components/PreviousSearches';
-import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getResults } from './utilityFunctions';
+import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getDifferentFields, getDispatchBody } from './utilityFunctions';
 import { MdOutlineTrain } from 'react-icons/md'
 import { Action, PreviousSearch, State, Train } from './types';
 
@@ -251,7 +251,14 @@ const App = () => {
 	}
 
 	async function onFormSearch(formData: State["prevQuery"]["formData"]) {
-		getResults(formData, state.prevQuery.formData, dispatch);
+		let differentFields: string[] | [] = getDifferentFields(state.prevQuery.formData, formData)
+		if (differentFields.length === 0)
+			return;
+		let returnOnly = (differentFields.length === 1 && differentFields[0] === 'returnDateTime');
+
+		returnOnly ? dispatch({ type: 'toggleLoading' }) : dispatch({ type: 'toggleLoadingAndReset' });
+		let dispatchBody = await getDispatchBody(formData, returnOnly);
+		if (dispatchBody) dispatch(dispatchBody);
 	}
 
 	return (

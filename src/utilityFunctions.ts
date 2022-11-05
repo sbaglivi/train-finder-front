@@ -17,7 +17,114 @@ export const shortenedStationNames = {
 };
 
 export const acceptedStations = ['Milano Centrale', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
-export const getResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
+
+export const post = async (path: string, body: BodyInit, returning: boolean, dispatch: (action: Action) => void) => {
+	if (returning) dispatch({ type: 'toggleLoading' });
+	else dispatch({ type: 'toggleLoadingAndReset' });
+	try {
+		let response = await fetch(`https://api.tf.bravewonderer.com${path}`, {
+			//let response = await fetch(`http://localhost:3003${path}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json'
+			},
+			body: body
+		})
+		if (!response.ok) {
+			throw Error(`After posting to ${path} response was not ok`)
+		}
+		return await response.json()
+	} catch (e) {
+		let errorMessage;
+		if (e instanceof Error)
+			errorMessage = e.message
+		else if (typeof e === 'string')
+			errorMessage = e
+		else errorMessage = 'Received an error that was neither Error type nor string';
+		console.log(errorMessage)
+		if (!returning)
+			dispatch({ type: 'requestFail', payload: { reqType: 'outgoing', error: errorMessage } });
+		else
+			dispatch({ type: 'requestFail', payload: { reqType: 'returning', error: errorMessage } });
+	}
+}
+
+export const postRequest = async (path: string, body: BodyInit) => {
+	const BASE_URL = 'https://api.tf.bravewonderer.com';
+	let response = await fetch(`${BASE_URL}${path}`, {
+		//let response = await fetch(`http://localhost:3003${path}`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Accept': 'application/json'
+		},
+		body: body
+	})
+	if (!response.ok) {
+		throw Error(`After posting to ${path} response was not ok`)
+	}
+	return await response.json()
+}
+
+export const getRoundtripResults = async (formData: State["prevQuery"]["formData"]) => {
+	let origin = stationNameToCamelcase(formData.origin)
+	let destination = stationNameToCamelcase(formData.destination)
+	let body = { ...formData, origin, destination }
+	let results = await postRequest('/allNoOffers', JSON.stringify(body));
+	if (!results) return;
+	results.results.outgoing.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+	results.results.returning.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+	return results;
+}
+
+export const getOneWayResults = async (formData: State["prevQuery"]["formData"]) => {
+	let origin = stationNameToCamelcase(formData.origin)
+	let destination = stationNameToCamelcase(formData.destination)
+	let reqBody = { ...formData, origin, destination }
+	let results = await postRequest('/outgoingOnly', JSON.stringify(reqBody));
+	if (!results) return;
+	results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+	return results;
+}
+
+export const getDispatchBody = async (formData: State["prevQuery"]["formData"], returnOnly: boolean): Promise<Action | void> => {
+	let oneWay = !formData.returnDateTime;
+	let currentTimestamp = Date.now()
+	let query = { formData, time: currentTimestamp }
+	let results;
+
+	try {
+		if (oneWay) {
+			results = await getOneWayResults(formData);
+			if (!results) return;
+			return { type: 'onewaySearch', payload: { query, outgoing: results.results, error: results.error } };
+
+		} else {
+			if (returnOnly) { // should check if already chosen selected
+				results = await getOneWayResults({ ...formData, origin: formData.destination, destination: formData.origin }) // swapped origin and destination since I'm searching for return trips
+				if (!results) return;
+				return { type: 'returnTimeUpdate', payload: { query, error: results.error, returning: results.results } };
+			} else {
+				results = await getRoundtripResults(formData);
+				if (!results) return;
+				return { type: 'roundtripSearch', payload: { query, error: results.error, outgoing: results.results.outgoing, returning: results.results.returning, metadata: results.metadata } };
+			}
+		}
+
+	} catch (e) {
+		let errorMessage;
+		if (e instanceof Error)
+			errorMessage = e.message
+		else if (typeof e === 'string')
+			errorMessage = e
+		else errorMessage = 'Received an error that was neither Error type nor string';
+		console.log(errorMessage)
+		return { type: 'requestFail', payload: { reqType: returnOnly ? 'returning' : 'outgoing', error: errorMessage } };
+	}
+}
+
+export const oldGetResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
 	let oneWay = !formData.returnDateTime;
 	let differentFields: string[] | [] = getDifferentFields(prevFormData, formData)
 	if (differentFields.length === 0)
@@ -270,38 +377,6 @@ export const stationNameToCamelcase = (str: string) => {
 	let newStr = str.replaceAll(' ', '');
 	newStr = newStr.charAt(0).toLowerCase() + newStr.slice(1);
 	return newStr
-}
-
-export const post = async (path: string, body: BodyInit, returning: boolean, dispatch: (action: Action) => void) => {
-	if (returning) dispatch({ type: 'toggleLoading' });
-	else dispatch({ type: 'toggleLoadingAndReset' });
-	try {
-		let response = await fetch(`https://api.tf.bravewonderer.com${path}`, {
-			//let response = await fetch(`http://localhost:3003${path}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Accept': 'application/json'
-			},
-			body: body
-		})
-		if (!response.ok) {
-			throw Error(`After posting to ${path} response was not ok`)
-		}
-		return await response.json()
-	} catch (e) {
-		let errorMessage;
-		if (e instanceof Error)
-			errorMessage = e.message
-		else if (typeof e === 'string')
-			errorMessage = e
-		else errorMessage = 'Received an error that was neither Error type nor string';
-		console.log(errorMessage)
-		if (!returning)
-			dispatch({ type: 'requestFail', payload: { reqType: 'outgoing', error: errorMessage } });
-		else
-			dispatch({ type: 'requestFail', payload: { reqType: 'returning', error: errorMessage } });
-	}
 }
 
 // Normally I: parse formdata, decide whether to make a request.
