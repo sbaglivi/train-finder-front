@@ -18,38 +18,6 @@ export const shortenedStationNames = {
 
 export const acceptedStations = ['Milano Centrale', 'Reggio Emilia', 'Bologna', 'Firenze', 'Roma Termini', 'Roma Tiburtina', 'Napoli Centrale', 'Napoli Afragola', 'Salerno', 'Vallo della Lucania'];
 
-export const post = async (path: string, body: BodyInit, returning: boolean, dispatch: (action: Action) => void) => {
-	if (returning) dispatch({ type: 'toggleLoading' });
-	else dispatch({ type: 'toggleLoadingAndReset' });
-	try {
-		let response = await fetch(`https://api.tf.bravewonderer.com${path}`, {
-			//let response = await fetch(`http://localhost:3003${path}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Accept': 'application/json'
-			},
-			body: body
-		})
-		if (!response.ok) {
-			throw Error(`After posting to ${path} response was not ok`)
-		}
-		return await response.json()
-	} catch (e) {
-		let errorMessage;
-		if (e instanceof Error)
-			errorMessage = e.message
-		else if (typeof e === 'string')
-			errorMessage = e
-		else errorMessage = 'Received an error that was neither Error type nor string';
-		console.log(errorMessage)
-		if (!returning)
-			dispatch({ type: 'requestFail', payload: { reqType: 'outgoing', error: errorMessage } });
-		else
-			dispatch({ type: 'requestFail', payload: { reqType: 'returning', error: errorMessage } });
-	}
-}
-
 export const postRequest = async (path: string, body: BodyInit) => {
 	const BASE_URL = 'https://api.tf.bravewonderer.com';
 	let response = await fetch(`${BASE_URL}${path}`, {
@@ -123,6 +91,7 @@ export const getDispatchBody = async (formData: State["prevQuery"]["formData"], 
 		return { type: 'requestFail', payload: { reqType: returnOnly ? 'returning' : 'outgoing', error: errorMessage } };
 	}
 }
+
 export const getRoundtripDiscounts = async (formData: State['prevQuery']['formData'], metadata: State['metadata'], goingoutTrain: Train) => {
 	let requestBodyBase = { ...formData, origin: stationNameToCamelcase(formData.origin), destination: stationNameToCamelcase(formData.destination), company: goingoutTrain.company };
 	let requestBody;
@@ -134,67 +103,6 @@ export const getRoundtripDiscounts = async (formData: State['prevQuery']['formDa
 	}
 	let reqResults = await postRequest('/return', JSON.stringify(requestBody));
 	return reqResults;
-}
-
-export const searchReturn = async (train: Train, metadata: State['metadata'], formData: State['prevQuery']['formData'], state: State) => {
-	try {
-		// let reqResults = await post('/return', JSON.stringify(requestBody), true, dispatch)
-		let reqResults = await getRoundtripDiscounts(formData, metadata, train);
-		if (!reqResults?.results?.length) throw Error(`Results.length <= 0: ${reqResults.error}`);
-		console.log('Return results.length > 0, updating prices');
-		let chosen = { ...state.trains.chosen, [train.company]: train }
-		let newReturningTrains = addRoundtripPrices(reqResults, state.trains.returning, chosen, train.company)
-		// dispatch({ type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } })
-		return { type: 'selectOutgoingTrip', payload: { returning: newReturningTrains, chosen, error: reqResults.error } };
-	} catch (e) {
-		let errorMessage;
-		if (e instanceof Error)
-			errorMessage = e.message
-		else if (typeof e === 'string')
-			errorMessage = e
-		else errorMessage = 'Received an error that was neither Error type nor string';
-		console.log('request for ' + train.company + ' returns failed' + errorMessage);
-		return { type: 'setError', payload: { error: errorMessage } };
-	}
-}
-
-
-export const oldGetResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
-	let oneWay = !formData.returnDateTime;
-	let differentFields: string[] | [] = getDifferentFields(prevFormData, formData)
-	if (differentFields.length === 0)
-		return;
-	let currentTimestamp = Date.now()
-	let query = { formData, time: currentTimestamp }
-	let origin = stationNameToCamelcase(formData.origin)
-	let destination = stationNameToCamelcase(formData.destination)
-	let results
-
-	if (oneWay) {
-		console.log('making search')
-		let reqBody = { ...formData, origin, destination }
-		results = await post('/outgoingOnly', JSON.stringify(reqBody), false, dispatch) // File to run is the simple one that just return lines
-		if (!results) return;
-		results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
-		dispatch({ type: 'onewaySearch', payload: { query, outgoing: results.results, error: results.error } })
-
-	} else {
-		if (differentFields.length === 1 && differentFields[0] === 'returnDateTime') {
-			// should check if already chosen selected
-			let body = { ...formData, origin: destination, destination: origin } // swapped them because I'm looking for return trips, no?
-			results = await post('/outgoingOnly', JSON.stringify(body), true, dispatch) // simple script no metadata since only return search
-			if (!results) return;
-			results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
-			dispatch({ type: 'returnTimeUpdate', payload: { query, error: results.error, returning: results.results } });
-		} else {
-			let body = { ...formData, origin, destination }
-			results = await post('/allNoOffers', JSON.stringify(body), false, dispatch) // this needs to return metadata
-			if (!results) return;
-			results.results.outgoing.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
-			results.results.returning.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
-			dispatch({ type: 'roundtripSearch', payload: { query, error: results.error, outgoing: results.results.outgoing, returning: results.results.returning, metadata: results.metadata } })
-		}
-	}
 }
 
 
@@ -275,7 +183,6 @@ export const applySortOrder = (sortOrder: { by: string, asc: number }, trains: T
 			throw new Error(`applySortOrder was called with a key that it's not supposed to handle: ${by}`);
 	}
 	return newOrder;
-	// reorderResults(newOrder);
 }
 
 export function binarySearch<Type>(array: Type[], element: Type, compareFn: (a: Type, b: Type, asc: number) => number, asc: number = 1): Type | false {
@@ -435,6 +342,76 @@ const italoReturnRequest = async (formData, prevQuery, setTrains) => {
 	let requestBody = {origin, destination, dateTime, returnDateTime, passengers, goingoutId: inputValue, cookies, company: 'italo'} // ? don't like the input value getting renamed to 'id'
 	let results = await post('/aerr', requestBody)
 	setTrains(prev => ({...prev, returning: results}))
+}
+
+export const post = async (path: string, body: BodyInit, returning: boolean, dispatch: (action: Action) => void) => {
+	if (returning) dispatch({ type: 'toggleLoading' });
+	else dispatch({ type: 'toggleLoadingAndReset' });
+	try {
+		let response = await fetch(`https://api.tf.bravewonderer.com${path}`, {
+			//let response = await fetch(`http://localhost:3003${path}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json'
+			},
+			body: body
+		})
+		if (!response.ok) {
+			throw Error(`After posting to ${path} response was not ok`)
+		}
+		return await response.json()
+	} catch (e) {
+		let errorMessage;
+		if (e instanceof Error)
+			errorMessage = e.message
+		else if (typeof e === 'string')
+			errorMessage = e
+		else errorMessage = 'Received an error that was neither Error type nor string';
+		console.log(errorMessage)
+		if (!returning)
+			dispatch({ type: 'requestFail', payload: { reqType: 'outgoing', error: errorMessage } });
+		else
+			dispatch({ type: 'requestFail', payload: { reqType: 'returning', error: errorMessage } });
+	}
+}
+
+export const oldGetResults = async (formData: State["prevQuery"]["formData"], prevFormData: State["prevQuery"]["formData"], dispatch: (action: Action) => void) => {
+	let oneWay = !formData.returnDateTime;
+	let differentFields: string[] | [] = getDifferentFields(prevFormData, formData)
+	if (differentFields.length === 0)
+		return;
+	let currentTimestamp = Date.now()
+	let query = { formData, time: currentTimestamp }
+	let origin = stationNameToCamelcase(formData.origin)
+	let destination = stationNameToCamelcase(formData.destination)
+	let results
+
+	if (oneWay) {
+		console.log('making search')
+		let reqBody = { ...formData, origin, destination }
+		results = await post('/outgoingOnly', JSON.stringify(reqBody), false, dispatch) // File to run is the simple one that just return lines
+		if (!results) return;
+		results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+		dispatch({ type: 'onewaySearch', payload: { query, outgoing: results.results, error: results.error } })
+
+	} else {
+		if (differentFields.length === 1 && differentFields[0] === 'returnDateTime') {
+			// should check if already chosen selected
+			let body = { ...formData, origin: destination, destination: origin } // swapped them because I'm looking for return trips, no?
+			results = await post('/outgoingOnly', JSON.stringify(body), true, dispatch) // simple script no metadata since only return search
+			if (!results) return;
+			results.results.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+			dispatch({ type: 'returnTimeUpdate', payload: { query, error: results.error, returning: results.results } });
+		} else {
+			let body = { ...formData, origin, destination }
+			results = await post('/allNoOffers', JSON.stringify(body), false, dispatch) // this needs to return metadata
+			if (!results) return;
+			results.results.outgoing.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+			results.results.returning.sort((a: Train, b: Train) => departureTimeSort(a, b, 1));
+			dispatch({ type: 'roundtripSearch', payload: { query, error: results.error, outgoing: results.results.outgoing, returning: results.results.returning, metadata: results.metadata } })
+		}
+	}
 }
 
 */

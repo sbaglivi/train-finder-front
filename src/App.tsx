@@ -4,7 +4,7 @@ import Table from './components/Table';
 import { useReducer } from 'react';
 import { BallTriangle } from 'react-loader-spinner';
 import PreviousSearches from './components/PreviousSearches';
-import { applySortOrder, post, stationNameToCamelcase, addRoundtripPrices, getDifferentFields, getDispatchBody, getRoundtripDiscounts } from './utilityFunctions';
+import { applySortOrder, addRoundtripPrices, getDifferentFields, getDispatchBody, getRoundtripDiscounts } from './utilityFunctions';
 import { MdOutlineTrain } from 'react-icons/md'
 import { Action, PreviousSearch, State, Train } from './types';
 
