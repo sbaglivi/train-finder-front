@@ -88,9 +88,10 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
         // dispatch({type: 'reorderResults', payload: {direction, sortOrder}})
     }
     const minPriceRequiresRoundtrip = (train: Train) => train.minOnewayPrice && train.minPrice !== train.minOnewayPrice;
+    const isReturningAndAnyOutgoingSelected = isReturning && (outgoingSelected && (outgoingSelected.italo !== undefined || outgoingSelected.trenitalia !== undefined)); // Should I pass a different prop (boolean) for this?
 
     let ths = defaultFields.map((field, index) => <th key={index} onClick={sortResults.bind(null, field.key)}>{field.displayedName}</th>)
-    if (isReturning) ths.push(<th key="returning" onClick={updateSortOrder.bind(null, returnField.key, setSortOrder)}>{returnField.displayedName}</th>)
+    if (isReturningAndAnyOutgoingSelected) ths.push(<th key="returning" onClick={updateSortOrder.bind(null, returnField.key, setSortOrder)}>{returnField.displayedName}</th>)
     if (isDev) ths = [...ths, ...developmentFields.map(field => <th key={field.key} style={{ display: showMore }} onClick={updateSortOrder.bind(null, field.key, setSortOrder)}>{field.displayedName}</th>)]
     let trs = trains.map(train => {
         return (
@@ -102,7 +103,7 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
                     }
                     return <td key={i} >{train[field.key]}</td>
                 })}
-                {isReturning ? <td key={returnField.key} >{train[returnField.key]}</td> : null}
+                {isReturningAndAnyOutgoingSelected ? <td key={returnField.key} >{train[returnField.key]}</td> : null}
                 {isDev ? developmentFields.map(field => <td key={field.key} style={{ display: showMore }}>{train[field.key]}</td>) : null}
             </tr>
         )

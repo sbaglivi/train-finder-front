@@ -277,7 +277,7 @@ const App = () => {
 			{state.error ? <p style={{ color: 'darkred' }}>{state.error}</p> : null}
 			<div className='container' >
 				{state.trains.outgoing.length ? <Table trains={state.trains.outgoing} dispatch={dispatch} isReturning={false} outgoingSelected={state.trains.chosen} searchReturn={searchReturn} returnResults={state.trains.returning.length > 0} isRoundtrip={state.prevQuery.formData.returnDateTime !== ""} /> : null}
-				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} /> : null}
+				{state.trains.returning.length ? <Table trains={state.trains.returning} dispatch={dispatch} isReturning={true} outgoingSelected={state.trains.chosen} /> : null}
 			</div>
 		</>
 	)
