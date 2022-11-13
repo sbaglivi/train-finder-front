@@ -21,6 +21,10 @@ body {
 input {
   font-size: 1em;
 }
+input:focus {
+  outline-color: white;
+  outline-style: solid;
+}
 input[type='text'] {
   border-radius: 4px;
   border: 1px solid black;
@@ -30,18 +34,23 @@ input[type='text'] {
   border-radius: 4px;
   padding: 12px 18px;
   border: none;
-  background-color: #bb0000;
   color: white;
-  font-weight: 700;
+  font-weight: 500;
+  font-size: 14px;
   box-shadow: 0px 0px 1rem rgba(0,0,0,0.4);
+  background: none;
+  border: 1px solid #c4c4c6;
+  display: flex;
+  align-items: center;
+  column-gap: 8px;
   cursor: pointer;
   align-self: center;
 }
 button:hover {
-  background-color: #cc0000;
+  background-color: #2e3546;
 }
 button:active {
-  background-color: #990000;
+  background-color: #121417;
 }
 
 code {
@@ -88,11 +97,11 @@ td {
 }
 
 .invalid input, .invalid textarea {
-  border-color: #990000 !important;
+  border-color: #f94242 !important;
   border-width: 2px !important;
 }
 .invalid p {
-  color: #990000;
+  color: #f94242;
   font-size: 14px;
   text-align: center;
 }
@@ -124,7 +133,8 @@ form {
   align-items: center;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #dddddd;
+  background-color: #141924;
+  color: white;
   padding-block: 4em;
   row-gap: 1.2em;
 }
@@ -156,8 +166,12 @@ li:hover {
 }
 
 table {
-  border-collapse: collapse;
+  border: 1px solid #c4c4c6;
+  border-radius: 8px;
+  border-spacing: 0px;
+  overflow: hidden;
   width: 100%;
+  color: black;
   --lighter-rows-color: hsl(0, 0%, 87%);
   --darker-rows-color: hsl(0, 0%, 80%);
   --lighter-rows-color-hover: hsl(0, 0%, 67%);
@@ -176,11 +190,15 @@ tr {
   height: 36px;
   background-color: var(--lighter-rows-color);
 }
+thead > tr {
+  color: white;
+  background-color: #141924;
+}
 th {
   cursor: pointer;
 }
 th:hover {
-  background-color: #555;
+  background-color: #2e3546;
 }
 tbody > tr:nth-of-type(even){
   background-color: var(--darker-rows-color);
@@ -199,10 +217,6 @@ tbody > tr:nth-of-type(even):hover {
 }
 .returnSearchSpan:hover {
   cursor: pointer;
-}
-thead > tr {
-  background-color: #444444;
-  color: white;
 }
 .loadingAnimation * {
   margin-block: 1em;
@@ -406,7 +420,7 @@ thead > tr {
   font-size: 14px;
   cursor: pointer;
   padding: 14px;
-  border: 1px solid black;
+  border: 1px solid #c4c4c6;
   user-select: none;
   border-radius: 8px;
 }
@@ -419,9 +433,21 @@ thead > tr {
   margin-block: 4px;
 }
 .prevSearchDiv:hover {
-  background-color: #aaaaaa;
+  background-color: #2e3546;
 }
 #contextMenu {
   background-color: black;
   color: white;
 }
+
+/*
+table tr:last-child td:first-child {
+    border: 2px solid orange;
+    border-bottom-left-radius: 10px;
+}
+
+table tr:last-child td:last-child {
+    border: 2px solid green;
+    border-bottom-right-radius: 10px;
+}
+*/

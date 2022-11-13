@@ -4,6 +4,7 @@ import { State } from '../types'
 import InputColumn from "./InputColumn";
 import StationInputs from "./StationInputs";
 import DateTimeInput from './DateTimeInput';
+import { FiSearch } from 'react-icons/fi';
 
 
 const SearchForm = ({ onFormSearch }: { onFormSearch: (formData: State["prevQuery"]["formData"]) => void }) => {
@@ -37,7 +38,7 @@ const SearchForm = ({ onFormSearch }: { onFormSearch: (formData: State["prevQuer
 					<label htmlFor='passengersInput' className='passengersLabel'>Adulti Senior Giovani</label>
 				</div>
 			</InputColumn>
-			<button className='formSearchButton'>Search</button>
+			<button className='formSearchButton'><FiSearch size={26} />Search</button>
 		</form>
 	);
 }
