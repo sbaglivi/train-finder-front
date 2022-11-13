@@ -48,7 +48,9 @@ export type Train = {
     minOnewayPrice: number | undefined,
     minRoundtripPrice: number | undefined,
     minIndividualPrice: number,
-    totPrice: number
+    totPrice: number,
+    totPriceHint: string,
+    roundTripIsBestPrice: boolean
 }
 
 export type TrainWD = Train & {

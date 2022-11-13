@@ -153,3 +153,13 @@ current issues:
 Somewhere a key parameter is still missing
 I need to make 2 params on table optional (only needed on one of the two)
 Style is not being applied correctly to table header
+
+Decision:
+(For sure I want discounted total price data to be available if it's the best. To be fair in an ideal world
+I'd probably go for a non discounted price if the difference was like 1 euro for the flexibility in choosing the outgoing train
+but this is not an ideal world and I don't want to write extra logic for that.)
+
+- show the individual ticket and the discounted total price or
+- the discounted individual ticket and discounted total price
+
+behaviour I want: mobile user clicks on hint icon: popup shows up, when he clicks out of the hint it gets closed

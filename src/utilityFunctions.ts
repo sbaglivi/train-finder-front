@@ -130,18 +130,37 @@ export function addRoundtripPrices(reqResults: { results: Train[] }, returningTr
 			let minOutgoingPrice = getMinOutgoingPrice(outgoingTrains);
 			if (matchingTrain.minOnewayPrice <= matchingTrain.minRoundtripPrice) { // no AR offers, can also choose outgoing train of other company
 				matchingTrain.totPrice = Math.round((minOutgoingPrice + matchingTrain.minPrice) * 10) / 10;
+				matchingTrain.totPriceHint = `Andata: ${minOutgoingPrice}, Ritorno: ${matchingTrain.minPrice}`
+				matchingTrain.roundTripIsBestPrice = false;
 			} else {
 				let minMixedPrice = minOutgoingPrice + matchingTrain.minOnewayPrice;
 				let minRoundtripPrice = outgoingTrain.minPrice + matchingTrain.minRoundtripPrice;
-				matchingTrain.totPrice = Math.min(minMixedPrice, minRoundtripPrice);
+				if (minMixedPrice <= minRoundtripPrice) {
+					matchingTrain.totPriceHint = `Andata: ${minOutgoingPrice}, Ritorno: ${matchingTrain.minPrice}`
+					matchingTrain.totPrice = minMixedPrice;
+					matchingTrain.roundTripIsBestPrice = false;
+				} else {
+					matchingTrain.totPrice = minRoundtripPrice;
+					matchingTrain.totPriceHint = `Prezzo disponibile solo se compri l'andata con ${company} (Andata: ${outgoingTrain.minPrice}, Ritorno: ${matchingTrain.minRoundtripPrice}).
+						Costo biglietto individuale di ritorno: ${matchingTrain.minOnewayPrice}`
+					matchingTrain.roundTripIsBestPrice = true;
+				}
 			}
 		}
 	}
 	for (let train of otherCompanyReturnTrains) {
-		if (train.totPrice === undefined) train.totPrice = train.minPrice + outgoingTrain.minPrice;
-		else {
+		if (train.minOnewayPrice === undefined) {
+			train.minOnewayPrice = train.minPrice;
+			train.totPriceHint = `Andata: ${outgoingTrain.minPrice}, Ritorno: ${train.minPrice}`
+			train.totPrice = train.minPrice + outgoingTrain.minPrice;
+			train.roundTripIsBestPrice = false;
+		} else {
 			let mixedPrice = train.minOnewayPrice! + outgoingTrain.minPrice;
-			if (mixedPrice <= train.totPrice) train.totPrice = mixedPrice;
+			if (mixedPrice <= train.totPrice) {
+				train.totPriceHint = `Andata: ${outgoingTrain.minPrice}, Ritorno: ${train.minPrice}`
+				train.totPrice = mixedPrice;
+				train.roundTripIsBestPrice = false;
+			}
 		}
 	}
 	let newReturningTrains = [...otherCompanyReturnTrains, ...sameCompanyReturnTrains].sort((a, b) => departureTimeSort(a, b, 1))

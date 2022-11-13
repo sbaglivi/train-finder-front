@@ -1,5 +1,6 @@
 import { Train, State, Action } from '../types';
 import { useState, useEffect } from 'react';
+import { AiOutlineInfoCircle, AiOutlineClose } from 'react-icons/ai';
 
 
 type Field = {
@@ -13,7 +14,7 @@ let defaultFields: Field[] = [
     { key: "minPrice", displayedName: "Prezzo" },
     { key: "company", displayedName: "Azienda" },
 ]
-let returnField: Field = { key: "totPrice", displayedName: "Tot" };
+let returnField: Field = { key: "totPrice", displayedName: "Totale" };
 let developmentFields: Field[] = [
     { key: "minIndividualPrice", displayedName: "ItaloSingolo" },
     { key: "adult", displayedName: "Adulto(T)" },
@@ -31,8 +32,8 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
 
     let [sortOrder, setSortOrder] = useState({ by: 'departureTime' as keyof Train, asc: 1 });
     let [contextMenuState, setContextMenuState] = useState({ position: { x: 0, y: 0 }, clickedTrainId: null, visible: false });
+
     let showMore = 'none';
-    let hintNeeded = false;
 
     const handleRightClick = (e: any) => {
         e.preventDefault()
@@ -87,8 +88,8 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
         // let direction: "returning" | "outgoing" = isReturning ? 'returning' : 'outgoing';
         // dispatch({type: 'reorderResults', payload: {direction, sortOrder}})
     }
-    const minPriceRequiresRoundtrip = (train: Train) => train.minOnewayPrice && train.minPrice !== train.minOnewayPrice;
-    const isReturningAndAnyOutgoingSelected = isReturning && (outgoingSelected && (outgoingSelected.italo !== undefined || outgoingSelected.trenitalia !== undefined)); // Should I pass a different prop (boolean) for this?
+    const anyOutgoingSelected = outgoingSelected && (outgoingSelected.italo !== undefined || outgoingSelected.trenitalia !== undefined);
+    const isReturningAndAnyOutgoingSelected = isReturning && anyOutgoingSelected;
 
     let ths = defaultFields.map((field, index) => <th key={index} onClick={sortResults.bind(null, field.key)}>{field.displayedName}</th>)
     if (isReturningAndAnyOutgoingSelected) ths.push(<th key="returning" onClick={updateSortOrder.bind(null, returnField.key, setSortOrder)}>{returnField.displayedName}</th>)
@@ -97,13 +98,13 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
         return (
             <tr key={train.id} data-id={train.id} className={(!isReturning && train.id === outgoingSelected![train.company]?.id) ? `${train.company}Selected` : ''} onDoubleClick={(!isReturning && isRoundtrip) ? searchReturn!.bind(null, train) : undefined}>
                 {defaultFields.map((field, i) => {
-                    if (isReturning && field.key === "minPrice" && minPriceRequiresRoundtrip(train)) {
-                        if (!hintNeeded) hintNeeded = true;
-                        return <td key={i} className={'roundtripOnly'}><span>{`Prezzo disponibile solo se compri l'andata con ${train.company}`}</span>{train.minPrice}*</td>
+                    if (field.key === "minPrice" && isReturningAndAnyOutgoingSelected) {
+                        return <td key={i}>{train.minOnewayPrice}</td>
                     }
                     return <td key={i} >{train[field.key]}</td>
                 })}
-                {isReturningAndAnyOutgoingSelected ? <td key={returnField.key} >{train[returnField.key]}</td> : null}
+                {isReturningAndAnyOutgoingSelected ? <td key={returnField.key} ><label className="tooltip">{train[returnField.key]}<AiOutlineInfoCircle size={14} /><input type="checkbox" /><span className="hint">{train.totPriceHint}<AiOutlineClose className={"hintCloseSpan"} size={16} /></span></label></td> : null}
+
                 {isDev ? developmentFields.map(field => <td key={field.key} style={{ display: showMore }}>{train[field.key]}</td>) : null}
             </tr>
         )
@@ -122,7 +123,6 @@ const Table = ({ trains, isReturning, dispatch, searchReturn, outgoingSelected, 
                     {trs}
                 </tbody>
             </table>
-            {hintNeeded ? <p className='mobileHint'>* Prezzo disponibile solo se compri l'andata con la stessa compagnia.</p> : null}
             <div style={{ zIndex: 1, display: contextMenuState.visible ? 'block' : 'none', position: 'absolute', top: `${contextMenuState.position.y}px`, left: `${contextMenuState.position.x}px` }} id={`${isReturning ? "returning" : "outgoing"}ContextMenu`}>
                 <button onClick={logTrain}>Click</button>
             </div>
