@@ -137,6 +137,13 @@ export function addRoundtripPrices(reqResults: { results: Train[] }, returningTr
 			}
 		}
 	}
+	for (let train of otherCompanyReturnTrains) {
+		if (train.totPrice === undefined) train.totPrice = train.minPrice + outgoingTrain.minPrice;
+		else {
+			let mixedPrice = train.minOnewayPrice! + outgoingTrain.minPrice;
+			if (mixedPrice <= train.totPrice) train.totPrice = mixedPrice;
+		}
+	}
 	let newReturningTrains = [...otherCompanyReturnTrains, ...sameCompanyReturnTrains].sort((a, b) => departureTimeSort(a, b, 1))
 	return newReturningTrains;
 }
